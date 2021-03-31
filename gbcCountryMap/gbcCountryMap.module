@@ -1,5 +1,13 @@
 <?php
 /**
+ * @file Country Map
+ * @author Miguel Martínez <miguel01amd@gmail.com>
+ * @package Recetario | Custom
+ * @info Módulo de services para llenado del mapa de paises 
+ * @vertion dev 1.0.0
+ */
+
+/**
  * @file
  * Enable Country Map section on Bimbo Today
  */
@@ -8,7 +16,7 @@ module_load_include('inc', 'gbcCountryMap', 'gbcCountryMap.services');
 /*
  * Implements hook_permission().
  */
-function gbcCountryMap_permission() { 
+function gbcCountryMap_permission() {
   $perm = array(
     'administer gbcCountryMap' => array(
       'title'       => t('Administer gbcCountryMap module'),
@@ -61,7 +69,7 @@ function gbcCountryMap_block_view($delta = '') {
 /**
  * Implements hook_theme().
  */
-function gbcCountryMap_theme() { 
+function gbcCountryMap_theme() {
   $theme = [];
   $theme['country_map']  = [ 'template' => 'templates/country-map',  ];
 
@@ -85,7 +93,7 @@ function gbcCountryMap_get_content() {
  * Return list of countries .
  * @return array
  */
-function gbcCountryMap_get_countries() { 
+function gbcCountryMap_get_countries() {
   $vid  = taxonomy_vocabulary_machine_name_load('countries')->vid;
   $lang = _gbcCommon_language();
   $countries = [];

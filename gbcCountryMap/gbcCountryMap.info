@@ -1,5 +1,5 @@
 name = Corporativo Today - Country Map
-description = Block that show country map on Corp Today Section.
+description = Block that show country map on Corp Today Section with services.
 package = Corp - Sections
 core = 7.x
 version = "7.x"
