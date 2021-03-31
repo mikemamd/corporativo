@@ -1,0 +1,117 @@
+<?php
+/**
+ * @file
+ * Enable Country Map section on Bimbo Today
+ */
+module_load_include('inc', 'gbcCountryMap', 'gbcCountryMap.services');
+
+/*
+ * Implements hook_permission().
+ */
+function gbcCountryMap_permission() { 
+  $perm = array(
+    'administer gbcCountryMap' => array(
+      'title'       => t('Administer gbcCountryMap module'),
+      'description' => t('Administer content of gbcCountryMap module'),
+    ),
+
+    'view gbcCountryMap' => array(
+      'title'       => t('view a Country Map content'),
+      'description' => t('Permit viewer block gbcCountryMap'),
+    ),
+  );
+  return $perm;
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function gbcCountryMap_block_info() {
+  $blocks = [];
+  $blocks['country_map'] = array(
+    'info'       => t('Mapa de países'),
+    'weight'     => 1,
+    'status'     => TRUE,
+    'region'     => 'bottom_content',
+    'cache'      => DRUPAL_NO_CACHE,
+    'visibility' => BLOCK_VISIBILITY_LISTED,
+    'pages'      => 'bimbo-today',
+  );
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function gbcCountryMap_block_view($delta = '') {
+  $block = [];
+  switch ($delta) {
+    case 'country_map':
+      if(user_access('view gbcCountryMap')){
+        drupal_add_js( drupal_get_path('theme', 'corporate') . "/js/controllers/bimbo_today.js", array('weight' => 5,'scope' => 'footer'));
+        $block['content'] = gbcCountryMap_get_content();
+      }else{
+        $block['content'] = t('Not access view content');
+      }
+      break;
+  }//end switch
+  return $block;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function gbcCountryMap_theme() { 
+  $theme = [];
+  $theme['country_map']  = [ 'template' => 'templates/country-map',  ];
+
+  return $theme;
+}
+
+/**
+ * Return content to block.
+ * @return array
+ */
+function gbcCountryMap_get_content() {
+  $slider = gbcCountryMap_get_slider()->data;
+
+  $content['country'] = gbcCountryMap_get_countries();
+  $content['slider']  = $slider;
+
+  return theme('country_map', array('content' => $content));
+}
+
+/**
+ * Return list of countries .
+ * @return array
+ */
+function gbcCountryMap_get_countries() { 
+  $vid  = taxonomy_vocabulary_machine_name_load('countries')->vid;
+  $lang = _gbcCommon_language();
+  $countries = [];
+
+  $qry = db_select('taxonomy_term_data', 'ttd');
+  $qry->condition('ttd.vid', $vid, '=');
+  $qry->condition('ttd.language', $lang, '=');
+  $qry->leftJoin('field_data_field_value_map', 'fvm', 'fvm.entity_id = ttd.tid');
+  $qry->leftJoin('field_data_field_country_default', 'fcd', 'fcd.entity_id = ttd.tid');
+  $qry->fields('ttd', ['tid', 'name']);
+  $qry->fields('fvm', ['field_value_map_value']);
+  $qry->fields('fcd', ['field_country_default_value']);
+  $qry->orderBy('ttd.weight', 'ASC');
+  $results = $qry->execute()->fetchAll();
+
+  if (!empty($results)) {
+    foreach ($results as $term) {
+      $data_defatult = ($term->field_country_default_value == 1) ? 'data-default="true"' : ' ';
+      $countries[] = [
+        'tid'   => $term->tid,
+        'name'  => $term->name,
+        'value' => $term->field_value_map_value,
+        'data'  => $data_defatult,
+      ];
+    }//endforeach
+  }//endif
+
+  return $countries;
+}
