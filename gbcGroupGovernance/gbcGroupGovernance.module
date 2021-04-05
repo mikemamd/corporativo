@@ -1,0 +1,151 @@
+<?php
+/**
+ * @file Our Group Governance Section
+ * @author Miguel Martínez <miguel01amd@gmail.com>
+ * @package Corp - Sections
+ * @info Sección de Grupos de Dirección
+ * @vertion dev 1.0.0
+ */
+
+module_load_include('inc', 'gbcGroupGovernance', 'gbcGroupGovernance');
+
+/*
+ * Implements hook_permission().
+ */
+function gbcGroupGovernance_permission() {
+  $perm = array(
+    'administer gbcGroupGovernance' => array(
+      'title'       => t('administer module'),
+      'description' => t('Administer content of module'),
+    ),
+
+    'view gbcGroupGovernance' => array(
+      'title'       => t('view content'),
+      'description' => t('Permit viewer block content'),
+    ),
+  );
+  return $perm;
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function gbcGroupGovernance_block_info() {
+  $blocks = [];
+  $blocks['gbcGroupGovernance_menu'] = array(
+    'info'       => t('Menu lateral de Sidebar'),
+    'weight'     => 1,
+    'status'     => TRUE,
+    'region'     => 'sidebar',
+    'cache'      => DRUPAL_NO_CACHE,
+    'visibility' => BLOCK_VISIBILITY_LISTED,
+    'pages'      => 'nuestro-grupo/*',
+  );
+  $blocks['gbcGroupGovernance_docs'] = array(
+    'info'       => t('Documentos de Sidebar'),
+    'weight'     => 2,
+    'status'     => TRUE,
+    'region'     => 'sidebar',
+    'cache'      => DRUPAL_NO_CACHE,
+    'visibility' => BLOCK_VISIBILITY_LISTED,
+    'pages'      => 'nuestro-grupo/*',
+  );
+
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function gbcGroupGovernance_block_view($delta = '') {
+  $block = [];
+  switch ($delta) {
+    case 'gbcGroupGovernance_menu':
+      if(user_access('view gbcGroupGovernance')){
+        $block['content'] = gbcGroupGovernance_get_blocks($delta);
+      }else{
+        $block['content'] = t('Not access view content');
+      }
+      break;
+    case 'gbcGroupGovernance_docs':
+      if(user_access('view gbcGroupGovernance')){
+        $block['content'] = gbcGroupGovernance_get_blocks($delta);
+      }else{
+        $block['content'] = t('Not access view content');
+      }
+      break;
+  }//end switch
+  return $block;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function gbcGroupGovernance_theme() {
+  $theme = [];
+  $theme['gbcGroupGovernance_menu'] = [ 'template' => 'templates/lateral-menu', ];
+  $theme['gbcGroupGovernance_docs'] = [ 'template' => 'templates/lateral-docs', ];
+
+  return $theme;
+}
+
+
+/**
+ * Implements hook_preprocess_node().
+ * Da formato de salida a variables del nodo
+ */
+function gbcGroupGovernance_preprocess_node(&$variables) {
+
+  //Content Types de Interiores para Gobierno Corporativo
+  if ( isset($variables['field_image']) && !empty($variables['field_image']) ) {
+    $fid = ( isset($variables['field_image'][0]['fid'] ) ) ? $variables['field_image'][0]['fid'] : '';
+    $variables['content_img'] = ( !empty($fid) ) ? _gbcCommon_image_path($fid) : '';
+  }
+
+  if ($variables['type'] == 'corporategovernance' ) {
+    $js = 'about_us';
+    //$variables['class_section'] = 'about-us-commitee';
+
+    if ( isset($variables['field_member_list']) && !empty($variables['field_member_list']) ) {
+      $js = 'about_us_corporate_council';
+      $variables['member_list'] = gbcGroupGovernance_get_members('select');
+      $variables['accordion']   = gbcGroupGovernance_get_members('dropdown');
+
+      drupal_add_js( drupal_get_path('theme', 'corporate') . "/js/ui/Combo.js", array('weight' => 2,'scope' => 'footer'));
+      drupal_add_js( drupal_get_path('theme', 'corporate') . "/js/core/Event.js", array('weight' => 3,'scope' => 'footer'));
+      drupal_add_js( drupal_get_path('theme', 'corporate') . "/js/core/Responsive.js", array('weight' => 4,'scope' => 'footer'));
+    }//endif
+
+    drupal_add_js( drupal_get_path('theme', 'corporate') . "/js/controllers/". $js .".js", array('weight' => 5,'scope' => 'footer'));
+  }//endif
+
+
+  if ($variables['type'] == 'ourgroup_corporategovernance' ) {
+    $variables['type_content'] = 'simple';
+
+    if ( isset($variables['field_image']) && $variables['field_image'] ) {
+      $variables['type_content'] = 'double';
+    }//endif
+
+    if ( isset($variables['field_corporate_files']) && $variables['field_corporate_files'] ) {
+      $i = 1;
+
+      foreach ($variables['field_corporate_files'] as $document) {
+        $order = ($i <= 4) ? 'left' : 'right';
+        $variables['documents'][$order][$i] = [
+          'name' => $document['field_title_document']['und'][0]['value'],
+          'file' => _gbcCommon_image_path( $document['field_document_adjunt']['und'][0]['fid'] ),
+        ];
+        ++$i;
+      }//endforeach
+      $variables['type_content'] = 'files';
+    }//endif
+
+    if ( isset($variables['field_class']) && $variables['field_class'] ) {
+      $variables['interior_class'] = $variables['field_class'][0]['value'];
+    }//endif
+
+    drupal_add_js( drupal_get_path('theme', 'corporate') . "/js/plugins/masonry.pkgd.js", array('weight' => 2,'scope' => 'footer'));
+
+  }//endif
+}

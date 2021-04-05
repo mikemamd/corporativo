@@ -1,0 +1,5 @@
+name = Our Group Governance Section
+description = Module to display Our Group Section.
+package = Corp - Sections
+core = 7.x
+version = "7.x"
