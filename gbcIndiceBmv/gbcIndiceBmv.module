@@ -1,0 +1,176 @@
+<?php
+/**
+ * @file Our Group Governance Section
+ * @author Miguel Martínez <miguel01amd@gmail.com>
+ * @package Corp - Sections
+ * @info Sección de Grupos de Dirección
+ * @vertion dev 1.0.0
+ */
+
+/*
+ * Implements hook_permission().
+*/
+function gbcIndiceBmv_permission() {
+  $perm = array(
+    'administer gbcIndiceBmv' => array(
+      'title'       => t('Administer block gbcIndice'),
+      'description' => t('Administer structure of gbcIndice'),
+    ),
+    'view gbcIndiceBmv' => array(
+      'title'       => t('View block gbcIndiceBmv'),
+      'description' => t('Permit viewer block to gbcIndice'),
+    ),
+  );
+  return $perm;
+}
+
+/**
+ * Implements hook_menu().
+ * Declared the content page
+ */
+function gbcIndiceBmv_menu() {
+  $items = [];
+  $items['indice-bmv'] = array(
+    'title'            => t('índice BMV'),
+    'description'      => t('Page of the Indice BMV'),
+    'page callback'    => 'gbcIndiceBmv_page_empty',
+    'access arguments' => array('view gbcIndiceBmv'),
+  );
+  return $items;
+}
+
+
+/**
+ * @info Define the empty page
+ * @return (string)
+*/
+function gbcIndiceBmv_page_empty() {
+  return '';
+}
+
+
+/**
+ * Implements hook_block_info().
+ */
+function gbcIndiceBmv_block_info() {
+  $blocks = array();
+  $blocks['indice_bmv'] = array(
+    'info'       => t('Block to display Indice BMV content'),
+    'status'     => TRUE,
+    'region'     => 'content',
+    'cache'      => DRUPAL_NO_CACHE,
+    'visibility' => BLOCK_VISIBILITY_LISTED,
+    'pages'      => 'indice-bmv'
+  );
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function gbcIndiceBmv_block_view($delta = '') {
+  $block = [];
+  switch ($delta) {
+    case 'indice_bmv':
+      if(user_access('view gbcIndiceBmv')){
+        $block['content'] = gbcIndiceBmv_get_content();
+      }else{
+        $block['content'] = t('Not access view content');
+      }
+    break;
+  }//end switch
+  return $block;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function gbcIndiceBmv_theme() {
+  return array(
+    'indice_bmv' => array('template' => 'templates/gbcIndiceBmv',
+    ),
+  );
+}
+
+/**
+ * Construct the content of the block.
+ * @return array
+ */
+function gbcIndiceBmv_get_content() {
+  // External Function
+  $language = _gbcCommon_language();
+  $vocab    = taxonomy_vocabulary_machine_name_load('indice_bmv');
+  $vid      = $vocab->vid;
+
+  $bmv = [];
+  $bmv = gbcIndiceBmv_get_terms('0', $vid, $language);
+
+  if (!empty($bmv)) {
+    $count_p = 0;
+    foreach ($bmv as $padre) {
+      $bmv[$count_p]['indicadores'] = gbcIndiceBmv_get_terms($padre['tid'], $vid, $language);
+      $count_h = 0;
+      if (!empty($bmv[$count_p]['indicadores'])) {
+        foreach ($bmv[$count_p]['indicadores'] as $hijo) {
+          $bmv[$count_p]['indicadores'][$count_h]['referencia'] = gbcIndiceBmv_get_terms($hijo['tid'], $vid, $language);
+          ++$count_h;
+        }//endforeach
+        $bmv[$count_p]['rows'] = $count_h;
+      }//endif
+      ++$count_p;
+    }//endforeach
+    return theme('indice_bmv', array('content' => $bmv));
+  }//endif
+}
+
+/**
+ * Get the taxonomy terms by parent.
+ * @return array
+ */
+function gbcIndiceBmv_get_terms($parent, $vid, $language) {
+  $content  = [];
+
+  $query = db_select('taxonomy_term_data', 'ttd')
+  ->condition('ttd.vid', $vid, '=')
+  ->condition('tth.parent', $parent, '=');
+  //->condition('ttd.language', $lang, '=');
+  $query->innerJoin('taxonomy_term_hierarchy', 'tth', 'tth.tid = ttd.tid');
+  $query->leftJoin('field_data_field_link', 'fl', 'fl.entity_id = ttd.tid');
+  $query->leftJoin('field_data_field_document', 'fd', 'fd.entity_id = ttd.tid');
+  $query->fields('ttd', ['tid', 'name']);
+  $query->fields('fl', ['field_link_value']);
+  $query->fields('fd', ['field_document_fid']);
+  $query->orderBy('ttd.weight', 'ASC');
+  $results = $query->execute()->fetchAll();
+
+  $count = 0;
+  if (isset($results) && !empty($results)) {
+    foreach ($results as $result) {
+      $field = (!empty($result->field_link_value)) ? $result->field_link_value : $result->field_document_fid;
+      $name = gbcIndiceBmv_get_link($field, $result->name);
+
+      $content[$count] = [
+        'name' => $name,
+        'tid'  => $result->tid,
+      ];
+      ++$count;
+    }//end foreach
+    return $content;
+  }
+}
+
+/**
+ * Construct the name path of the field.
+ * @return array
+ */
+function gbcIndiceBmv_get_link($field, $name) {
+  if (!empty($field)) {
+    // External Function
+    $url  = (is_numeric($field)) ? _gbcCommon_image_path($field) : $field;
+    $href = '<a href="'.$url.'">'.$name.'</a>';
+    return $href;
+  }
+  else {
+    return '<p>'.$name.'</p>';
+  }
+}

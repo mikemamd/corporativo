@@ -1,0 +1,60 @@
+<?php
+/**
+ * @file
+ * Install, update and uninstall functions to Indice BMV.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function gbcIndiceBmv_install(){
+  taxonomy_vocabulary_save((object) array(
+    'name'         => 'Índice Evaluadoras BMV',
+    'machine_name' => 'indice_bmv',
+    'description'  => t('Content to Indice Evaluadoras BMV Table'),
+    'module'       => 'gbcIndiceBmv',
+  )); 
+  
+  field_info_cache_clear();
+
+  $instances = array(
+    'Link' => array( 
+      'field_name'  => 'field_link', 
+      'label'       => t('Link'),
+      'description' => t('URL to the reference indicator'),
+      'widget'      => array(
+        'type' => 'text'
+      ),
+    ),
+    'File' => array(
+      'field_name'  => 'field_document',
+      'type'        => 'file',
+      'label'       => t('Reference file'),
+      'description' => t('Add file to the reference field'),
+      'settings'    => array(
+        'file_directory'  => 'field/indicebvm',
+        'file_extensions' => 'pdf doc docx',
+        'max_filesize'    => '',
+        'max_resolution'  => '',
+        'min_resolution'  => '',
+        'alt_field'       => fALSE,
+        'title_field'     => '',
+      ),
+    ),
+  );
+  foreach ($instances as $instance) {
+    $instance['entity_type'] = 'taxonomy_term';
+    $instance['bundle']      = 'indice_bmv';
+    field_create_instance($instance);
+  }//end foreach 
+
+}
+
+/** 
+ * Implements hook_uninstall().
+ */
+function gbcIndiceBmv_uninstall() {
+  $voc_id = taxonomy_vocabulary_machine_name_load('indice_bmv');
+  taxonomy_vocabulary_delete($voc_id->vid);
+  field_purge_batch(1000);
+}
