@@ -1,0 +1,114 @@
+<?php
+/**
+ * @file Founders Block
+ * @author Miguel Martínez <miguel01amd@gmail.com>
+ * @package Corp - Sections
+ * @info Bloque slide de Fundadores
+ * @vertion dev 1.0.0
+ */
+
+/**
+ * Implements hook_block_info().
+ */
+function gbcFounders_block_info() {
+  $block = [];
+
+  $block['gbcFounders_content_block'] = array(
+    'info'       => t('Corp Founders Content'),
+    'weight'     => 1,
+    'status'     => TRUE,
+    'region'     => 'content',
+    'cache'      => DRUPAL_NO_CACHE,
+    'visibility' => BLOCK_VISIBILITY_LISTED,
+    'pages'      => 'fundadores',
+  );
+
+  return $block;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function gbcFounders_block_view($delta = '') {
+  $block = array();
+  switch ($delta) {
+    case 'gbcFounders_content_block':
+      drupal_add_js( drupal_get_path('theme', 'corporate') . "/js/controllers/founders.js" , array('weight' => 4,'scope' => 'footer'));
+      $block['content'] = gbcFounders_get_content();
+      break;
+    default:
+      break;
+  } // end switch
+  return $block;
+}
+
+/**
+ * Implements hook_theme().
+ *
+ * @return array
+ * @see templates
+ */
+function gbcFounders_theme() {
+  $theme = [];
+  $theme['gbcFounders_content_block']  = [ 'template' => 'templates/gbcFounders.content',  ];
+
+  return $theme;
+}
+
+/**
+ * Get content from "Founders"
+ *
+ * @return string
+ */
+function gbcFounders_get_content() {
+  // External Function
+  $language = gbcCommon_language();
+
+  $query = db_select('node', 'n');
+  $query->leftJoin('field_data_body','fdb','fdb.entity_id = n.nid');
+  $query->leftJoin('field_data_field_image','fdfl','fdfl.entity_id = n.nid');
+  $query->leftJoin('field_data_field_direct_quote','fdq','fdq.entity_id = n.nid');
+  $query->condition('n.type', 'founders');
+  $query->condition('n.language', $language);
+  $query->fields('n', ['nid', 'title'])
+        ->fields('fdb', ['body_value'])
+        ->fields('fdfl', ['field_image_fid'])
+        ->fields('fdq', ['field_direct_quote_value']);
+  $query->orderBy('n.changed', 'DESC');
+
+  $results = $query->execute()->fetchAll();
+
+  if ( !empty($results) ) {
+    $j = 0;
+    foreach ($results as $result) {
+      // External Function
+      $image = _gbcCommon_image_path($result->field_image_fid);
+      $content['slide'][] = [
+        'img' => $image,
+        'tid' => $result->nid,
+      ];
+
+      $content['founders'][$j] = [
+        'name' => $result->title,
+        'tid'  => $result->nid,
+        'img'  => $image,
+        'desc' => $result->body_value,
+        'quot' => $result->field_direct_quote_value,
+      ];
+      ++$j;
+    }// end foreach
+
+    for ($x = 0; $x < $j; ++$x) {
+      $prev = $x - 1;
+      $next = $x + 1;
+
+      $content['founders'][$x]['prev'] = ($x > 0) ? $content['founders'][$prev]['name'] : '';
+      $content['founders'][$x]['next'] = ($x < ($j - 1)) ? $content['founders'][$next]['name'] : '';
+    }//endfor
+
+    $content['founders'][0]['prev']     = $content['founders'][$prev]['name'];
+    $content['founders'][$prev]['next'] = $content['founders'][0]['name'];
+
+  }//endif
+  return theme('gbcFounders_content_block', array('content' => $content));
+}

@@ -1,0 +1,5 @@
+name = Founders Block
+description = Display blocks with "Founders" information.
+package = Corp - Sections
+core = 7.x
+version = "7.x"
