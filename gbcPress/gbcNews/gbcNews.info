@@ -1,0 +1,5 @@
+name = News section
+description = Module of the News section.
+package = Corp - Sections | Press
+version = "7.x"
+core = 7.x

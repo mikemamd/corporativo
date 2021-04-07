@@ -1,0 +1,5 @@
+name = Press Releases Content
+description = Module to sections news and press realease.
+package = Corp - Sections | Press
+version = "7.x"
+core = 7.x

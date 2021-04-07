@@ -1,0 +1,138 @@
+<?php
+/**
+ * @file  Press Releases Content
+ * @author Miguel Martínez <miguel01amd@gmail.com>
+ * @package Corp - Sections
+ * @info Module to sections news and press realease.
+ * @vertion dev 1.0.0
+ */
+
+/**
+ * Implements hook_block_info().
+ */
+function gbcPress_block_info() {
+  $blocks = array();
+  $blocks['press_controls'] = array(
+    'info'       => t('Press Release'),
+    'status'     => TRUE,
+    'region'     => 'bottom_content',
+    'cache'      => DRUPAL_NO_CACHE,
+    'visibility' => BLOCK_VISIBILITY_LISTED,
+    'pages'      => 'sala-de-prensa/noticias',
+  );
+
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function gbcPress_block_view($delta = '') {
+  $block = [];
+  switch ($delta) {
+    case 'press_controls':
+      $block['content'] = gbcPress_get_controls();
+      break;
+  }//end switch
+  return $block;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function gbcPress_theme() {
+  $theme = [];
+  $theme['press_controls'] = [ 'template' => 'templates/press-controls',  ];
+
+  return $theme;
+}
+
+/**
+ * Construct controls to node content.
+ * @return array
+ */
+function gbcPress_get_controls() {
+  global $base_url;
+  $results  = $content = $controls = [];
+  $language = _gbcCommon_language();
+
+  if ($node = menu_get_object()) {
+    $type = $node->type;
+    $nid  = $node->nid;
+
+    $query = db_select('node', 'n')
+          ->condition('type', $type, '=')
+          ->condition('status', '1', '=')
+          ->condition('n.language', $language, '=');
+    $query->fields('n', ['nid', 'title', 'changed']);
+    $query->orderBy('changed', 'DESC');
+    $results = $query->execute()->fetchAll();
+
+    if (!empty($results)) {
+      $j = 0;
+      foreach ($results as $result) {
+        $content[$j] = $result->nid;
+        ++$j;
+      }// end foreach
+
+      $needle = array_search($nid, $content);
+
+      //$prev = ( $needle < ($j - 1) ) ? url('node/'.$content[$needle + 1]) : url('node/'.$content[0]);
+      //$next = ( $needle > 0 ) ? url('node/'.$content[$needle - 1]) : url('node/'.$content[$j - 1]);
+
+      $prev = ( $needle < ($j - 1) ) ? 'node/'.$content[$needle + 1] : 'node/'.$content[0];
+      $next = ( $needle > 0 ) ? 'node/'.$content[$needle - 1] : 'node/'.$content[$j - 1];
+
+    }//endif
+
+    $controls['prev'] =  l(t('<span class="icon-arrow-right"></span>Anterior'), $prev,
+      array('html' => TRUE, 'attributes' => array('class' => 'btn-default')));
+
+    $controls['next'] =  l(t('Siguiente<span class="icon-arrow-right"></span>'), $next,
+      array('html' => TRUE, 'attributes' => array('class' => 'btn-default')));
+
+  }//endif
+  return theme('press_controls', array('content' => $controls));
+}
+
+/**
+ * Implements hook_preprocess_node()
+*/
+function gbcPress_preprocess_node(&$vars) {
+  if ( $vars['type'] == 'news' || $vars['type'] == 'press_release' ) {
+    if ( isset($vars['field_image']) && !empty($vars['field_image']) ) {
+     $fid = ( isset($vars['field_image']['und']) ) ? $vars['field_image']['und'][0]['fid'] : $vars['field_image'][0]['fid'];
+
+      $image = theme_image( array(
+        'path'       => _gbcCommon_image_path($fid),
+        'alt'        => $vars['title'],
+        'attributes' => array('id' => $fid),
+      ));
+      $vars['img_press'] = $image;
+    }//endif
+
+    if ( !empty($vars['field_header']) ) {
+      $header = ( isset($vars['field_header']['und']) ) ? $vars['field_header']['und'][0]['value'] : $vars['field_header'][0]['value'];
+      $vars['header'] = $header;
+    } // endif
+
+    if ( !empty($vars['field_direct_quote']) ) {
+      $quote = ( isset($vars['field_direct_quote']['und']) ) ? $vars['field_direct_quote']['und'][0]['value'] : $vars['field_direct_quote'][0]['value'];
+      $vars['quote'] = $quote;
+    } // endif
+
+    if ( !empty($vars['field_name_direct_quote']) ) {
+      $direct = ( isset($vars['field_name_direct_quote']['und']) ) ? $vars['field_name_direct_quote']['und'][0]['value'] : $vars['field_name_direct_quote'][0]['value'];
+      $vars['direct_quote'] = $direct;
+    } // endif
+
+    if ( !empty($vars['body']) ) {
+      $body = ( isset($vars['body']['und']) ) ? $vars['body']['und'][0]['value'] : $vars['body'][0]['value'];
+      $vars['cont_body'] = $body;
+    } // endif
+
+
+
+    $vars['theme_hook_suggestions'][] = 'node__press';
+  }//endif
+}

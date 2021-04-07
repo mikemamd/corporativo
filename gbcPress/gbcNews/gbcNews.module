@@ -1,0 +1,193 @@
+<?php
+/**
+ * @file News section
+ * @author Miguel Martínez <miguel01amd@gmail.com>
+ * @package Corp - Sections
+ * @info Module of the News section.
+ * @vertion dev 1.0.0
+ */
+
+/*
+ * Implements hook_permission().
+*/
+function gbcNews_permission() {
+  $perm = array(
+    'administer gbcNews' => array(
+      'title'       => t('Administer block gbcNews'),
+      'description' => t('Administer structure of gbcNews'),
+    ),
+    'view gbcNews' => array(
+      'title'       => t('View block gbcNews'),
+      'description' => t('Permit viewer block to gbcNews'),
+    ),
+  );
+  return $perm;
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function gbcNews_block_info() {
+  $blocks = array();
+  $blocks['news_recent'] = array(
+    'info'       => t('Block to display most recent news'),
+    'status'     => TRUE,
+    'region'     => 'content',
+    'cache'      => DRUPAL_NO_CACHE,
+    'visibility' => BLOCK_VISIBILITY_LISTED,
+    'pages'      => 'sala-de-prensa/noticias',
+  );
+  $blocks['news_others'] = array(
+    'info'       => t('Block to display the other news content'),
+    'status'     => TRUE,
+    'region'     => 'bottom_content',
+    'cache'      => DRUPAL_NO_CACHE,
+    'visibility' => BLOCK_VISIBILITY_LISTED,
+    'pages'      => 'sala-de-prensa/noticias',
+  );
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function gbcNews_block_view($delta = '') {
+  $block = [];
+  switch ($delta) {
+    case 'news_recent':
+      if(user_access('view gbcNews')){
+        $block['content'] = gbcNews_get_news();
+      }else{
+        $block['content'] = t('Not access view content');
+      }
+    break;
+    case 'news_others':
+      if(user_access('view gbcNews')){
+        $block['content'] = gbcNews_get_others();
+      }else{
+        $block['content'] = t('Not access view content');
+      }
+    break;
+  }//end switch
+  return $block;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function gbcNews_theme() {
+  $theme = [];
+  $theme['news_recent'] = [ 'template' => 'templates/news-recent', ];
+  $theme['news_others'] = [ 'template' => 'templates/news-others', ];
+  return $theme;
+}
+
+/**
+ * Construct the content of the block.
+ * @return array
+ */
+function gbcNews_get_news($flag = null) {
+  global $base_url;
+  $language = _gbcCommon_language();
+  $results  = $content = $recents = [];
+
+  $query = db_select('node', 'n')
+        ->condition('status', '1', '=')
+        ->condition('n.language', $language, '=')
+        ->condition('type', 'news', '=');
+  $query->leftJoin('field_data_field_summary', 'fs', 'fs.entity_id = n.nid');
+  $query->leftJoin('field_data_field_image', 'fi', 'fi.entity_id = n.nid');
+  $query->fields('n', ['nid', 'title', 'changed']);
+  $query->fields('fs', ['field_summary_value']);
+  $query->fields('fi', ['field_image_fid']);
+  $query->range(0, 3);
+  $query->orderBy('changed', 'DESC');
+  $results = $query->execute()->fetchAll();
+
+  if (!empty($results)) {
+    if ($flag === null) {
+      foreach ($results as $result) {
+        $image = theme_image( array(
+          'path'       => _gbcCommon_image_path($result->field_image_fid),
+          'alt'        => $result->title,
+          'attributes' => array('id' => $result->field_image_fid),
+        ));
+
+        $content[] = [
+          'title'   => $result->title,
+          'summary' => $result->field_summary_value,
+          'img'     => $image,
+          'url'     => l(t('Leer más'), 'node/'.$result->nid, array('attributes' => array('class' => 'btn-default'))),
+          'date'    => gmdate("M d Y", $result->changed),
+        ];
+      }//endforeach
+      $recents = theme('news_recent', array('content' => $content));
+    }
+    else {
+      foreach ($results as $result) {
+        $recents[] = $result->nid;
+      }
+    }
+  }//endif
+  return $recents;
+}
+
+/**
+ * Construct the content to other news.
+ * @return array
+ */
+function gbcNews_get_others() {
+  global $base_url;
+  $language = _gbcCommon_language();
+  $rows = $result = [];
+
+  $nonids = gbcNews_get_news(1);
+
+  $query = db_select('node', 'n')
+    ->condition('type', 'news', '=')
+    ->condition('status', '1', '=')
+    ->condition('n.language', $language, '=');
+  if ( !empty($nonids) ) {
+    foreach ($nonids as $nid) {
+      $query->condition('n.nid', $nid, '!=');
+    }//enforeach
+  }//endif
+  $query->leftJoin('field_data_field_summary', 'fs', 'fs.entity_id = n.nid');
+  $query->leftJoin('field_data_field_image', 'fi', 'fi.entity_id = n.nid');
+  $query->fields('n', ['nid', 'title', 'changed']);
+  $query->fields('fs', ['field_summary_value']);
+  $query->fields('fi', ['field_image_fid']);
+  $results = $query
+        ->extend('PagerDefault')
+        ->element('0')
+        ->limit(5)
+        ->orderBy('changed', 'DESC')
+        ->execute();
+
+  while($row = $results->fetchAssoc()) {
+    $image = theme_image( array(
+      'path'       => _gbcCommon_image_path($row['field_image_fid']),
+      'alt'        => $row['title'],
+      'attributes' => array('id' => $row['field_image_fid']),
+    ));
+
+    $rows['items'][] = [
+      'date'    => t(gmdate("M d Y", $row['changed'])),
+      'nid'     => $row['nid'],
+      'title'   => $row['title'],
+      'summary' => $row['field_summary_value'],
+      'url'     => l(t('Leer más'), 'node/'.$row['nid'], array('attributes' => array('class' => 'btn-default'))),
+      'img'     => $image,
+    ];
+  }//endwhile
+
+  $rows['pager'] = theme('pager');
+
+  if ($node = menu_get_object()) {
+    $rows['sidebar']['body'] = ( !empty($node->body) ) ? $node->body['und'][0]['value'] : '';
+    $file = ( !empty($node->field_document) ) ? _gbcCommon_image_path( $node->field_document['und'][0]['fid'] ) : '';
+    $rows['sidebar']['file'] = l(t('<h6>Download</h6><p>Press Kit</p>'), $file, array('html' => TRUE,'attributes' => array('class' => 'btn-download')));
+  }//endif
+
+  return theme('news_others', array('content' => $rows));
+}

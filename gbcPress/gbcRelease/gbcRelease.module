@@ -1,0 +1,92 @@
+<?php
+/**
+ * @file  Releases section
+ * @author Miguel Martínez <miguel01amd@gmail.com>
+ * @package Corp - Sections
+ * @info Module of the releases section.
+ * @vertion dev 1.0.0
+ */
+
+/**
+ * Implements hook_block_info().
+ */
+function gbcRelease_block_info() {
+  $blocks = array();
+  $blocks['press_release'] = array(
+    'info'       => t('Block to display Release content'),
+    'status'     => TRUE,
+    'region'     => 'content',
+    'cache'      => DRUPAL_NO_CACHE,
+    'visibility' => BLOCK_VISIBILITY_LISTED,
+    'pages'      => 'sala-de-prensa/*'
+  );
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function gbcRelease_block_view($delta = '') {
+  $block = [];
+  switch ($delta) {
+    case 'press_release':
+      $block['content'] = gbcRelease_get_content();
+    break;
+  }//end switch
+  return $block;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function gbcRelease_theme() {
+  $theme = [];
+  $theme['press_release'] = [ 'template' => 'templates/gbcRelease', ];
+  return $theme;
+}
+
+/**
+ * Construct the content of the block.
+ * @return array
+ */
+function gbcRelease_get_content() {
+  global $base_url;
+  $language = _gbcCommon_language();
+  $rows = [];
+
+  $query = db_select('node', 'n')
+  ->condition('status', '1', '=')
+  ->condition('n.language', $language, '=')
+  ->condition('type', 'press_release', '=');
+  $query->leftJoin('field_data_field_summary', 'fs', 'fs.entity_id = n.nid');
+  $query->fields('n', ['nid', 'title', 'changed']);
+  $query->fields('fs', ['field_summary_value']);
+  $results = $query
+        ->extend('PagerDefault')
+        ->element('0')
+        ->limit(5)
+        ->orderBy('changed', 'DESC')
+        ->execute();
+
+  while($row = $results->fetchAssoc()) {
+    $rows['items'][] = [
+      'month'   => t(gmdate("m", $row['changed'])),
+      'day'     => gmdate("d", $row['changed']),
+      'year'    => gmdate("Y", $row['changed']),
+      'title'   => l($row['title'], 'node/'.$row['nid']),
+      'summary' => $row['field_summary_value'],
+      'url'     => l(t('Leer más'), 'node/'.$row['nid'], array('attributes' => array('class' => 'btn-default'))),
+    ];
+  }//endwhile
+
+  $rows['pager'] = theme('pager');
+
+  if ($node = menu_get_object()) {
+    $rows['sidebar']['body'] = ( !empty($node->body) ) ? $node->body['und'][0]['value'] : '';
+    $file = ( !empty($node->field_document) ) ? _gbcCommon_image_path( $node->field_document['und'][0]['fid'] ) : '';
+    $rows['sidebar']['file'] = l(t('<h6>Download</h6><p>Press Kit</p>'), $file, array('html' => TRUE,'attributes' => array('class' => 'btn-download')));
+  }//endif
+
+  return theme('press_release', array('content' => $rows));
+
+}
