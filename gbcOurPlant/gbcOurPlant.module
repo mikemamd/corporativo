@@ -1,0 +1,174 @@
+<?php
+/**
+ * @file Our Plant
+ * @author Miguel Martínez <miguel01amd@gmail.com>
+ * @package Corp - Sections
+ * @info  Block that show Our Plant Section.
+ * @vertion dev 1.0.0
+ */
+
+// Load servicess library
+module_load_include('inc', 'gbcOurPlant', 'gbcOurPlant.services');
+
+/*
+ * Implements hook_permission().
+ */
+function gbcOurPlant_permission() {
+  $perm = array(
+    'administer gbcOurPlant' => array(
+      'title'       => t('Administer gbcOurPlant module'),
+      'description' => t('Administer content of gbcOurPlant module'),
+    ),
+
+    'view gbcOurPlant' => array(
+      'title'       => t('view a Region list content'),
+      'description' => t('Permit viewer block gbcOurPlant'),
+    ),
+  );
+  return $perm;
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function gbcOurPlant_block_info() {
+  $blocks = [];
+  $blocks['OurPlant'] = array(
+    'info'       => t('Our Plant'),
+    'weight'     => 1,
+    'status'     => TRUE,
+    'region'     => 'content',
+    'cache'      => DRUPAL_NO_CACHE,
+    'visibility' => BLOCK_VISIBILITY_LISTED,
+    'pages'      => 'visit-our-plants',
+  );
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function gbcOurPlant_block_view($delta = '') {
+  $block = [];
+  switch ($delta) {
+    case 'OurPlant':
+      if(user_access('view gbcOurPlant')){
+        #drupal_add_js( drupal_get_path('theme', 'corporate') . "/js/controllers/bimbo_today.js", array('weight' => 5,'scope' => 'footer'));
+        drupal_add_js( drupal_get_path('theme', 'corporate') . "/js/ui/Combo.js" , array('weight' => 2,'scope' => 'footer'));
+        drupal_add_js( drupal_get_path('theme', 'corporate') . "/js/core/Event.js" , array('weight' => 3,'scope' => 'footer'));
+        drupal_add_js( drupal_get_path('theme', 'corporate') . "/js/core/Responsive.js" , array('weight' => 4,'scope' => 'footer'));
+        drupal_add_js( drupal_get_path('theme', 'corporate') . "/js/plugins/slick.min.js" , array('weight' => 7,'scope' => 'footer'));
+        drupal_add_js( drupal_get_path('theme', 'corporate') . "/js/controllers/our_plants.js" , array('weight' => 8,'scope' => 'footer'));
+        drupal_add_js( drupal_get_path('theme', 'corporate') . "/js/search.js" , array('weight' => 9,'scope' => 'footer'));
+        $block['content'] = gbcOurPlant_get_content();
+      }else{
+        $block['content'] = t('Not access view content');
+      }
+      break;
+  }//end switch
+  return $block;
+}
+
+/**
+ * Implements hook_theme().BrandsPlant
+ */
+function gbcOurPlant_theme() {
+  $theme = [];
+  $theme['OurPlant']  = [ 'template' => 'templates/gbcOurPlant',  ];
+
+  return $theme;
+}
+
+/**
+ * Return content to block.
+ * @return array
+ */
+function gbcOurPlant_get_content() {
+  #$content = gbcOurPlant_get_slider()->data;
+
+  #watchdog('$content[data]', print_r($content,TRUE));
+
+  $content['regions'] = gbcOurPlant_get_region();
+  return theme('OurPlant', array('content' => $content));
+}
+
+/**
+ * Return list of region .
+ * @return array
+ */
+function gbcOurPlant_get_region() {
+
+  $vid  = taxonomy_vocabulary_machine_name_load('region')->vid;
+  #$lang = _gbcCommon_language();
+  $lang = 'es';
+  $regions = [];
+
+  $qry = db_select('taxonomy_term_data', 'ttd');
+  $qry->condition('ttd.vid', $vid, '=');
+  $qry->condition('ttd.language', $lang, '=');
+  $qry->fields('ttd', ['tid', 'name']);
+  $qry->orderBy('ttd.weight', 'ASC');
+  $results = $qry->execute()->fetchAll();
+
+  if (!empty($results)) {
+    foreach ($results as $term) {
+      $regions[] = [
+        'tid'   => $term->tid,
+        'name'  => $term->name,
+      ];
+    }//endforeach
+  }//endif
+
+  return $regions;
+}
+
+
+/**
+ * Return list of region .
+ * @return array
+ */#field_data_
+function gbcOurPlant_get_brand($region, $brand = NULL) {
+
+#watchdog('$brand ', print_r($brand,TRUE));
+  $brands = '';
+  #$brands = [];
+    if (empty($region)) {
+      return $brands;
+    } // end if
+  //
+  #$lang = _gbcCommon_language();
+  $lang = 'es';
+  $vidmarca = taxonomy_vocabulary_machine_name_load('marcas')->vid;
+
+  $qry = db_select('taxonomy_term_data', 'ttd');
+  $qry->innerJoin('field_data_field_region', 'fdfr', 'fdfr.entity_id = ttd.tid');
+  $qry->leftJoin('field_data_field_logo', 'fimg', 'fimg.entity_id = ttd.tid');
+  $qry->leftJoin('field_data_field_link', 'flink', 'flink.entity_id = ttd.tid');
+  $qry->condition('ttd.vid', $vidmarca, '=');
+  if ($brand != NULL) {
+  $qry->condition('ttd.tid', $brand, '=');
+  }
+  $qry->condition('ttd.language', $lang, '=');
+  $qry->condition('fdfr.field_region_tid', $region, '=');
+
+  $qry->fields('ttd', ['tid', 'name']);
+  $qry->fields('fimg', ['field_logo_fid']);
+  $qry->orderBy('ttd.weight', 'ASC');
+  $results = $qry->execute()->fetchAll();
+
+  if (isset($results) && !empty($results)) {
+    $total = 0;
+    foreach ($results as $term) {
+      /**/
+      $brands[] = [
+      #$brands = [
+        'tidbrand'  => $term->tid,
+        'namebrand' => $term->name,
+        'imgbrand'  => _gbcCommon_image_path($term->field_logo_fid),
+        ];
+
+    }//endforeach
+
+  }//endif
+  return $brands;
+}

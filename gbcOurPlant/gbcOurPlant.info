@@ -1,0 +1,5 @@
+name = Our Plant
+description = Block that show Our Plant Section.
+package = Corp - Sections
+core = 7.x
+version = "7.x"
