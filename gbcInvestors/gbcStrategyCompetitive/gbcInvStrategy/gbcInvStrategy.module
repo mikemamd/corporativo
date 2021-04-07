@@ -1,0 +1,103 @@
+<?php
+/**
+ * @file Strategy and competitive advantages - Our Strategy
+ * @author Miguel Martínez <miguel01amd@gmail.com>
+ * @package Corp - Sections
+ * @info Display blocks with "Strategy and competitive advantages - Our Strategy" information.
+ * @vertion dev 1.0.0
+ */
+
+/**
+ * Implement hook_block_info()
+ */
+function gbcInvStrategy_block_info() {
+  $blocks = [];
+  $blocks['block_gbcInvStrategy'] = [
+    'info'       => t('Strategy and competitive advantages - Our Strategy'),
+    'title'      => '<none>',
+    'status'     => TRUE,
+    'region'     => 'content',
+    'weight'     => 2,
+    'visibility' => BLOCK_VISIBILITY_LISTED,
+  ];
+
+  return $blocks;
+}
+
+/**
+ * Implement hook_block_view()
+ */
+function gbcInvStrategy_block_view($delta) {
+  $block = [];
+  switch ($delta) {
+    case 'block_gbcInvStrategy':
+      drupal_add_js( drupal_get_path('theme', 'corporate') . "/js/controllers/investors_strategy.js", array('weight' => 4,'scope' => 'footer'));
+      $block['content'] = _gbcInvStrategy_content();
+  } // end switch
+  return $block;
+}
+
+/**
+ * Implement hook_theme()
+ */
+function gbcInvStrategy_theme() {
+  $theme = [];
+  $theme['gbcInvStrategy'] = [
+  'variables' => [],
+  'template' => 'templates/gbcInvStrategy',
+  ];
+  return $theme;
+}
+
+/**
+ * Retrive content from Strategy and competitive advantages - Relevant Information section
+ *
+ * @return theme
+ */
+function _gbcInvStrategy_content() {
+  $content  = [];
+
+  $vid = _gbcCommon_vocabularyID('our_strategy');
+  $terms = i18n_taxonomy_get_tree($vid, _gbcCommon_language());
+  $tree = _gbcCommon_build_tree($terms);
+
+  foreach ($terms as $term) {
+    $parents = (isset($term->parents[0]) && $term->parents[0] == 0) ? TRUE : FALSE;
+    $name = (isset($term->name) && !empty($term->name)) ? $term->name : '';
+    $tid = (isset($term->tid) && !empty($term->tid)) ? $term->tid : '';
+    if ($parents && $name && $tid) {
+      $content['parents'][$tid]['name'] = $name;
+      $content['parents'][$tid]['class'] = _gbcInvStrategy_class($tid);
+    } // end if
+    if (isset($term->childrens)) {
+      $content['children'][$tid] = $term->childrens;
+    } // end if
+  } // end foreach
+
+  return theme('gbcInvStrategy', ['content' => $content]);
+}
+
+/**
+ * @param string $id
+ * @return array|void
+ */
+function _gbcInvStrategy_class($id = '') {
+  if (empty($id)) {
+    return '';
+  } // end if
+
+  $language = _gbcCommon_language();
+  $query = db_select('	field_data_field_strategy_class', 'sc');
+  $query->addField('sc', 'field_strategy_class_value', 'class');
+  $terms = $query
+    ->condition('sc.entity_id', (int) $id, '=')
+    ->condition('sc.bundle', 'our_strategy', '=')
+    ->execute()
+    ->fetchField();
+
+  if (count($terms)<=0) {
+    return '';
+  } // end if
+
+  return $terms;
+}

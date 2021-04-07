@@ -1,0 +1,91 @@
+<?php
+/**
+ * @file RI Contact section
+ * @author Miguel Martínez <miguel01amd@gmail.com>
+ * @package Corp - Sections
+ * @info Display form for "RI Contact" section.
+ * @vertion dev 1.0.0
+ */
+
+/**
+ * Implement hook_theme()
+ */
+function gbcRIContact_theme() {
+  $theme = [];
+  $theme['gbcRIContact'] = [ 'render element' => 'form', 'template' => 'templates/gbcRIContactForm', ];
+  return $theme;
+}
+
+/**
+ * Implements hook_alter_form()
+ *
+ **/
+function gbcRIContact_form_alter(&$form, $form_state, $form_id) {
+  if($form_id == 'webform_client_form_9664'){
+
+    $form['submitted']['name'] = array(
+      '#type' => 'textfield',
+      '#attributes' => array( 'placeholder' => t('Name'),'data-name' => t('Name') ),
+      '#prefix' => '<div class="col-6">',
+      '#suffix' => '</div>',
+      '#theme_wrappers' => array(),
+    );
+
+    $form['submitted']['surnames'] = array(
+      '#type' => 'textfield',
+      '#attributes' => array( 'placeholder' => t('Surname'),'data-name' => t('Surname') ),
+      '#prefix' => '<div class="col-6">',
+      '#suffix' => '</div>',
+      '#theme_wrappers' => array(),
+    );
+
+    $form['submitted']['company'] = array(
+      '#type' => 'textfield',
+      '#attributes' => array( 'placeholder' => t('Company'),'data-name' => t('Company') ),
+      '#prefix' => '<div class="col-6">',
+      '#suffix' => '</div>',
+      '#theme_wrappers' => array(),
+    );
+
+    $form['submitted']['e_mail'] = array(
+      '#type' => 'textfield',
+      '#attributes' => array( 'placeholder' => t('E-mail'),'data-name' => t('E-mail') ),
+      '#prefix' => '<div class="col-6">',
+      '#suffix' => '</div>',
+      '#theme_wrappers' => array(),
+    );
+
+    $form['submitted']['country']['#attributes'] = array('data-name' => t('Country'));
+    $form['submitted']['country']['#prefix'] = '<div class="col-6">';
+    $form['submitted']['country']['#suffix'] = '</div>';
+    $form['submitted']['country']['#theme_wrappers'] = array();
+
+    $form['submitted']['message'] = array(
+      '#type' => 'textarea',
+      '#attributes' => array( 'placeholder' => t('Message'),'data-name' => t('Message') ),
+      '#prefix' => '<div class="col-6">',
+      '#suffix' => '</div>',
+      '#theme_wrappers' => array(),
+    );
+
+    $form['captcha'] = array(
+      '#type' => 'captcha',
+      '#prefix' => '<div class="row captcha-elem">',
+      '#suffix' => '</div>',
+      '#captcha_type' => 'image_captcha/Image'
+    );
+    $form['terms_of_use'] = array(
+      '#type' => 'checkbox',
+      '#title' => t("I accept the Privacy Notice and Terms and Conditions."),
+      '#required' => TRUE,
+      '#prefix' => '<label>',
+      '#suffix' => '</label>',
+    );
+    $form['submit']['#value'] = t("Send");
+    $form['submit']['#attributes']['class'][] = 'btn-default';
+    /*$form['submit']['#validate'][] = 'checkout_confirm_news_form_validate';
+    $form['#submit'][] = 'gbcNewsLetter_block_form_submit';*/
+    $form['#theme'] = 'gbcRIContact';
+    $form['#theme_wrappers'] = array('form');
+  }
+}

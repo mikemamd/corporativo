@@ -1,0 +1,6 @@
+name = Strategy Investors
+description = Display blocks with "Strategy Investors- Group Bimbo" information.
+package = Corp - Sections | Investors | Strategy
+dependencies[] = gbcCommon
+core = 7.x
+version = "7.x"

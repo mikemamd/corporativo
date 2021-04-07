@@ -1,0 +1,163 @@
+<?php
+/**
+ * @file Factsheet Page
+ * @author Miguel Martínez <miguel01amd@gmail.com>
+ * @package Corp - Sections
+ * @info Sección de Grupos de Dirección
+ * @vertion dev 1.0.0
+ */
+
+
+/**
+ * Implements hook_permission().
+ * Define user permsissions to admin and view content
+ */
+function gbcFactsheet_permission() {
+  $perm = array(
+    'administer factsheet' => array(
+      'title'       => t('administer factsheet module'),
+      'description' => t('configure administer factsheet module'),
+    ),
+    'view factsheet' => array(
+      'title'       => t('view factsheet'),
+      'description' => t('Permit viewer factsheet content'),
+    ),
+  );
+  return $perm;
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function gbcFactsheet_block_info() {
+  $blocks = [];
+  $blocks['factsheet_block'] = array(
+    'info'       => t('Bloque items factsheet'),
+    'weight'     => 1,
+    'status'     => TRUE,
+    'region'     => 'content',
+    'cache'      => DRUPAL_NO_CACHE,
+    'visibility' => BLOCK_VISIBILITY_LISTED,
+    'pages'      => 'investors/factsheet',
+  );
+
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function gbcFactsheet_block_view($delta = '') {
+  $block = [];
+  switch ($delta) {
+    case 'factsheet_block':
+      module_load_include('inc', 'gbcFactsheet', 'gbcFactsheet');
+
+      drupal_add_js( drupal_get_path('theme', 'corporate') . "/js/controllers/investors/investors_home.js", array('weight' => 5,'scope' => 'footer'));
+      drupal_add_js( drupal_get_path('theme', 'corporate') . "/js/controllers/investors/investors_press_events.js", array('weight' => 5,'scope' => 'footer'));
+
+      $token = drupal_get_token('investors');
+      drupal_add_js( array('gbcFactsheet' => $token), array('type' => 'setting') );
+
+      $ages = create_years();
+
+      $content['years']   = [ 0 => t('All years')] + $ages;
+      $content['quarter'] = get_quarters();
+      $content['facts']   = gbcFactsheet_get_items();
+
+      $block['content'] = theme('factsheet_block', array('content' => $content));
+      break;
+  }//end switch
+  return $block;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function gbcFactsheet_theme() {
+  $theme = [];
+  $theme['factsheet_block'] = [ 'template' => 'templates/gbcfactsheet-page',  ];
+
+  return $theme;
+}
+
+
+/**
+ * Implements of hook_services().
+ * Declare service to section
+ */
+function gbcFactsheet_services_resources(){
+  $resource = array(
+    'factsheet' => array(
+      'operations' => array(
+        'index' => array(
+          'help' => 'Get factsheet items',
+          'file' => array(
+            'type'   => 'inc',
+            'module' => 'gbcFactsheet',
+            'name'   => 'gbcFactsheet',
+          ),
+          'callback'         => 'gbcFactsheet_get_content',
+          'access callback'  => 'user_access',
+          'access arguments' => array('view factsheet'),
+          'access arguments append' => FALSE,
+          'args' => array(
+            array(
+              'name'        => 'year',
+              'type'        => 'int',
+              'description' => '',
+              'source'      => array('param' => 'year'),
+              'optional'    => TRUE,
+              'default'     => 0,
+            ),
+            array(
+              'name'        => 'quaterly',
+              'type'        => 'int',
+              'description' => '',
+              'source'      => array('param' => 'quaterly'),
+              'optional'    => TRUE,
+              'default'     => 0,
+            ),
+            array(
+              'name'        => 'page',
+              'type'        => 'int',
+              'description' => '',
+              'source'      => array('param' => 'page'),
+              'optional'    => TRUE,
+              'default'     => 1,
+            ),
+          ),
+        ), // end index
+      ), // end operations
+    ), // end latest
+  );
+
+  return $resource;
+}
+
+/**
+ * Return items to vocabulary of quaterly
+ * @return array
+ */
+function get_quarters() {
+  $options = [];
+
+  $lang  = _gbcCommon_language();
+  $vocab = taxonomy_vocabulary_machine_name_load('quarterly');
+  $vid   = $vocab->vid;
+
+  $qry = db_select('taxonomy_term_data', 'ttd');
+  $qry->condition('ttd.vid', $vid, '=')
+      ->condition('ttd.language', $lang, '=');
+  $qry->fields('ttd', ['tid', 'name'])
+      ->orderBy('ttd.weight', 'ASC');
+  $results = $qry->execute()->fetchAll();
+
+  if (isset($results) && !empty($results)) {
+    foreach ($results as $result) {
+      $options[$result->tid] = $result->name;
+    }// endforeach
+  }// endoif
+
+  return $options;
+}

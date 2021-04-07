@@ -1,0 +1,6 @@
+name = Managers Investors
+description = Display blocks with "Managers Investors" information.
+package = Corp - Sections | Investors
+dependencies[] = gbcCommon
+core = 7.x
+version = "7.x"

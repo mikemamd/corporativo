@@ -1,0 +1,265 @@
+<?php
+/**
+ * @file Home Press and Reports Investors
+ * @author Miguel Martínez <miguel01amd@gmail.com>
+ * @package Corp - Sections
+ * @info Display blocks with "Home Press and Reports Investors" information.
+ * @vertion dev 1.0.0
+ */
+
+/**
+ * Implement hook_block_info()
+ */
+function gbcHomePressReport_block_info() {
+  $blocks = array();
+  $blocks['block_gbcHomePressReport'] = array(
+    'info'       => t('Home Press and Reports Investors'),
+    'title'      => '<none>',
+    'status'     => TRUE,
+    'region'     => 'content',
+    'weight'     => 3,
+    'visibility' => BLOCK_VISIBILITY_LISTED,
+    'pages'      => 'investors',
+  );
+
+  return $blocks;
+}
+
+/**
+ * Implement hook_block_view()
+ */
+function gbcHomePressReport_block_view($delta) {
+  #$block = array();
+  $block = [];
+  switch ($delta) {
+    case 'block_gbcHomePressReport':
+      $block['content'] = _gbcHomePressReport_content();
+  } // end switch
+  return $block;
+}
+
+/**
+ * Implement hook_theme()
+ */
+function gbcHomePressReport_theme()
+{
+  $theme = array();
+  $theme['gbcHomePressReport'] = array(
+  'variables' => array(/*'menu_items' => array()*/),
+  #'template' => 'homeslider',
+  'template' => 'templates/gbcHomePressReport',
+  );
+  return $theme;
+}
+
+/**
+ * Retrive slider data and pass to homeslider template
+ *
+ * @return theme
+ */
+function _gbcHomePressReport_content() {
+  $content  = [];
+  $language = _gbcCommon_language();
+  $rows = [];
+
+  $query = db_select('node', 'n')
+  ->condition('status', '1', '=')
+  ->condition('n.language', $language, '=')
+  ->condition('type', 'press_release', '=');
+  $query->leftJoin('field_data_field_summary', 'fs', 'fs.entity_id = n.nid');
+  $query->fields('n', ['nid', 'title', 'changed']);
+  $query->fields('fs', ['field_summary_value']);
+  $results = $query
+        ->extend('PagerDefault')
+        ->element('0')
+        ->limit(5)
+        ->orderBy('changed', 'DESC')
+        ->execute();
+
+        while($row = $results->fetchAssoc()) {
+          $path = url('node/'.$row['nid']);
+
+          $rows['items'][] = [
+            'month'   => gmdate("M", $row['changed']),
+            'day'     => gmdate("d", $row['changed']),
+            'year'    => gmdate("Y", $row['changed']),
+            'title'   => l($row['title'], $path),
+            'summary' => $row['field_summary_value'],
+            'url'     => l(t('View +'), $path),
+          ];
+        }//endwhile
+
+          $rows['link'] = _gbcHomePressReport_news_menu('menu-menu-last-news');
+          $rows['kit'] = _gbcCommon_download_content('KidInvestors');
+          $rows['webcast'] = _gbcCommon_download_content('WebCast');
+          $rows['report'] = _gbcHomePressReport_report_content();
+          $rows['presentation'] = _gbcHomePressReport_Presentation_content();
+          $rows['summaryannualreport'] = _gbcHomePressReport_SummaryReport_content();
+
+  return theme('gbcHomePressReport', array('content' => $rows));
+}
+
+/**
+ * Return the menu of the parameter Brands
+ * @return mixed
+ */
+function _gbcHomePressReport_news_menu($type) {
+  global $base_url;
+  $menu     = [];
+  $language = _gbcCommon_language();
+
+  $qry = db_select('menu_links', 'mn');
+  $qry->condition('mn.menu_name', $type, '=')
+      ->condition('mn.has_children', '0', '=')
+      ->condition('mn.language', $language, '=')
+      ->condition('mn.hidden', 0);
+  $qry->fields('mn', ['mlid', 'link_title','link_path']);
+  $qry->orderBy('weight', 'ASC');
+  $results = $qry->execute()->fetchAll();
+
+  if (isset($results) && !empty($results)) {
+    foreach ($results as $result) {
+
+      // Link path
+      #$link = url($result->link_path);
+      $link = $result->link_path;
+
+      if ($link == '<front>') {
+        $link = url();
+      }
+
+      $menu[] = [
+        'url'     => l($result->link_title, $link, array('attributes' => array('class' => 'btn-default next'))),
+
+      ];
+
+
+    }//end foreach
+    return $menu;
+  }//end if
+}
+
+
+/**
+ *  Return Summary Annual Report
+ *
+ * @return theme
+ */
+function _gbcHomePressReport_SummaryReport_content()
+{
+  $content  = [];
+  $language = _gbcCommon_language();
+
+
+  $query = db_select('node', 'n');
+  $query->leftJoin('field_data_field_document', 'fdfd', 'fdfd.entity_id = n.nid');
+  $query->leftJoin('field_data_field_history_year', 'fhy', 'fhy.entity_id = n.nid');
+  $terms = $query
+          ->fields('n', ['nid', 'title'])
+          ->fields('fdfd', array('field_document_fid'))
+          ->fields('fhy', array('field_history_year_value'))
+          ->condition('n.type', 'inv_anual_report', '=')
+          ->condition('n.language', $language, '=')
+          ->condition('n.status', 1, '=')
+          ->orderBy('fhy.field_history_year_value', 'desc')
+          ->range(0,1)
+          ->execute()
+          ->fetchAll();
+
+  if (count($terms)<=0) {
+    return array();
+  } // end if
+
+    foreach ($terms as $result) {
+      $content[] = array(
+        'title' => $result->title,
+        'file' => _gbcCommon_image_path($result->field_document_fid),
+      );
+    } // end foreach
+
+  return $content;
+}
+
+
+/**
+ *  Return Presentation
+ *
+ * @return theme
+ */
+function _gbcHomePressReport_Presentation_content()
+{
+  $content  = [];
+  $language = _gbcCommon_language();
+
+
+  $query = db_select('node', 'n');
+  $query->leftJoin('field_data_field_document_adjunt', 'fda', 'fda.entity_id = n.nid');
+  $query->leftJoin('field_data_field_history_year', 'fhy', 'fhy.entity_id = n.nid');
+  $terms = $query
+          ->fields('n', ['nid', 'title'])
+          ->fields('fda', array('field_document_adjunt_fid'))
+          ->fields('fhy', array('field_history_year_value'))
+          ->condition('n.type', 'inv_presentation_report', '=')
+          ->condition('n.language', $language, '=')
+          ->condition('n.status', 1, '=')
+          ->orderBy('fhy.field_history_year_value', 'desc')
+          ->range(0,1)
+          ->execute()
+          ->fetchAll();
+
+
+  if (count($terms)<=0) {
+    return array();
+  } // end if
+
+    foreach ($terms as $result) {
+      $content[] = array(
+        'title' => $result->title,
+        'file' => _gbcCommon_image_path($result->field_document_fid),
+      );
+    } // end foreach
+
+  return $content;
+}
+
+
+/**
+ *  Return Report
+ *
+ * @return theme
+ */
+function _gbcHomePressReport_report_content()
+{
+  $content  = [];
+  $language = _gbcCommon_language();
+
+
+  $query = db_select('node', 'n');
+  $query->leftJoin('field_data_field_document_adjunt', 'fda', 'fda.entity_id = n.nid');
+  $query->leftJoin('field_data_field_history_year', 'fhy', 'fhy.entity_id = n.nid');
+  $terms = $query
+          ->fields('n', ['nid', 'title'])
+          ->fields('fda', array('field_document_adjunt_fid'))
+          ->fields('fhy', array('field_history_year_value'))
+          ->condition('n.type', 'inv_quarterly_report', '=')
+          ->condition('n.language', $language, '=')
+          ->condition('n.status', 1, '=')
+          ->orderBy('fhy.field_history_year_value', 'desc')
+          ->range(0,1)
+          ->execute()
+          ->fetchAll();
+
+
+  if (count($terms)<=0) {
+    return array();
+  } // end if
+
+    foreach ($terms as $result) {
+      $content[] = array(
+        'title' => $result->title,
+        'file' => _gbcCommon_image_path($result->field_document_fid),
+      );
+    } // end foreach
+
+  return $content;
+}

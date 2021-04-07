@@ -1,0 +1,208 @@
+<?php
+/**
+ * @file Sidebar Investors
+ * @author Miguel Martínez <miguel01amd@gmail.com>
+ * @package Corp - Sections
+ * @info Display blocks with "Sidebar Investors- Group Bimbo" information.
+ * @vertion dev 1.0.0
+ */
+
+/**
+ * Implement hook_block_info()
+ */
+function gbcSidebar_block_info() {
+  $blocks = array();
+  $blocks['block_gbcSidebar'] = array(
+    'info'       => t('Sidebar Investors'),
+    'title'      => '<none>',
+    'status'     => TRUE,
+    'region'     => 'sidebar_investors',
+    'visibility' => BLOCK_VISIBILITY_LISTED,
+    'pages'      => 'investors/about',
+  );
+
+  return $blocks;
+}
+
+/*
+ * Implements hook_permission().
+ */
+function gbcSidebar_permission() {
+  $perm = array(
+    'administer gbcSidebar' => array(
+      'title'       => t('administer gbcSidebar module'),
+      'description' => t('Administer content of gbcSidebar module'),
+    ),
+    'create gbcSidebar'    => array(
+      'title'       => t('Create custom content of gbcSidebar'),
+      'description' => t('Permit create custom gbcSidebar by user'),
+    ),
+    'view gbcSidebar'      => array(
+      'title'       => t('view gbcSidebar'),
+      'description' => t('Permit viewer block gbcSidebar'),
+    ),
+  );
+  return $perm;
+}
+
+/**
+ * Define el iframe para Sidebar
+ * Implements hook_menu().
+ * @return array
+ */
+function gbcSidebar_menu() {
+  $items = [];
+  $items['admin/structure/iframe-investors/Sidebar'] = array(
+    'title'            => t('Sidebar Investors'),
+    'description'      => t('Configuración para el iframe del sidebar investors'),
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('gbcSidebar_admin_form'),
+    'access arguments' => array('administer gbcSidebar'),
+    'file'             => 'gbcSidebar.admin.inc',
+  );
+
+  return $items;
+}
+
+
+/**
+ * Implement hook_block_view()
+ */
+function gbcSidebar_block_view($delta) {
+  $block = [];
+  switch ($delta) {
+    case 'block_gbcSidebar':
+      $block['content'] = _gbcSidebar_content();
+  } // end switch
+  return $block;
+}
+
+/**
+ * Implement hook_theme()
+ */
+
+function gbcSidebar_theme() {
+  $theme = array();
+  $theme['gbcSidebar'] = array(
+  'variables' => array(),
+  'template' => 'templates/gbcSidebar',
+  );
+  return $theme;
+}
+
+/**
+ * Retrive slider data and pass to homeslider template
+ *
+ * @return theme
+ */
+function _gbcSidebar_content() {
+  $language = _gbcCommon_language();
+  global $base_url;
+
+  if ($language == 'es') {
+    $calc = variable_get('gbcSidebar_calc_es_yt','');
+  }
+
+  if ($language == 'en') {
+    $calc = variable_get('gbcSidebar_calc_en_yt','');
+  }
+
+  $iframe = variable_get('gbcSidebar_iframe_yt','');
+  $valueiframe = $iframe['value'];
+  $content['iframe'] = $valueiframe;
+
+  $link_path = url($calc);
+
+  if ($calc == '<front>') {
+    $link_path = url();
+  }
+
+  $path = _gbcCommon_alias_menu($calc);
+  #watchdog('$path$path', print_r($path,TRUE));
+  $content['calc'] = $path;
+
+  $content['kit'] = _gbcCommon_download_content('KidInvestors');
+
+  $content['factsheet'] = _gbcSidebar_Factsheet_content();
+
+  $content['annualreport'] = _gbcSidebar_AnnualReport_content();
+
+  return theme('gbcSidebar', array('content' => $content));
+}
+
+/**
+ *  Return Factsheet
+ *
+ * @return theme
+ */
+function _gbcSidebar_Factsheet_content() {
+  $content  = [];
+  $language = _gbcCommon_language();
+
+
+  $query = db_select('node', 'n');
+  $query->leftJoin('field_data_field_document_adjunt', 'fda', 'fda.entity_id = n.nid');
+  $query->leftJoin('field_data_field_history_year', 'fhy', 'fhy.entity_id = n.nid');
+  $terms = $query
+          ->fields('n', ['nid', 'title'])
+          ->fields('fda', array('field_document_adjunt_fid'))
+          ->fields('fhy', array('field_history_year_value'))
+          ->condition('n.type', 'factsheet_items', '=')
+          ->condition('n.language', $language, '=')
+          ->condition('n.status', 1, '=')
+          ->orderBy('fhy.field_history_year_value', 'desc')
+          ->range(0,1)
+          ->execute()
+          ->fetchAll();
+
+  if (count($terms)<=0) {
+    return array();
+  } // end if
+
+    foreach ($terms as $result) {
+      $content[] = array(
+        'title' => $result->title,
+        'file' => _gbcCommon_image_path($result->field_document_adjunt_fid),
+      );
+    } // end foreach
+
+  return $content;
+}
+
+/**
+ *  Return Annual Report
+ *
+ * @return theme
+ */
+function _gbcSidebar_AnnualReport_content() {
+  $content  = [];
+  $language = _gbcCommon_language();
+
+  $query = db_select('node', 'n');
+  $query->leftJoin('field_data_field_document_adjunt', 'fda', 'fda.entity_id = n.nid');
+  $query->leftJoin('field_data_field_history_year', 'fhy', 'fhy.entity_id = n.nid');
+  $terms = $query
+          ->fields('n', ['nid', 'title'])
+          ->fields('fda', array('field_document_adjunt_fid'))
+          ->fields('fhy', array('field_history_year_value'))
+          ->condition('n.type', 'inv_anual_report', '=')
+          ->condition('n.language', $language, '=')
+          ->condition('n.status', 1, '=')
+          ->orderBy('fhy.field_history_year_value', 'desc')
+          ->range(0,1)
+          ->execute()
+          ->fetchAll();
+
+  if (count($terms)<=0) {
+    return array();
+  } // end if
+
+    foreach ($terms as $result) {
+      $content[] = array(
+        'title' => $result->title,
+        'file' => _gbcCommon_image_path($result->field_document_adjunt_fid),
+      );
+    } // end foreach
+
+  return $content;
+}

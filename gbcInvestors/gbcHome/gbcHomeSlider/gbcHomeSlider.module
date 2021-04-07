@@ -1,0 +1,113 @@
+<?php
+/**
+ * @file Home Slider Investors
+ * @author Miguel Martínez <miguel01amd@gmail.com>
+ * @package Corp - Sections
+ * @see /admin/structure/types/manage/slider-content
+ * @info  Display blocks with "Slider Investors" information.
+ * @vertion dev 1.0.0
+ */
+
+/**
+ * Implement hook_block_info()
+ */
+function gbcHomeSlider_block_info() {
+  $blocks = array();
+  $blocks['block_home_slider'] = array(
+    'info'       => t('Slider Investors'),
+    'title'      => '<none>',
+    'status'     => TRUE,
+    'region'     => 'content',
+    'weight'     => 0,
+    'visibility' => BLOCK_VISIBILITY_LISTED,
+    'pages'      => 'investors',
+  );
+
+  return $blocks;
+}
+
+/**
+ * Implement hook_block_view()
+ */
+function gbcHomeSlider_block_view($delta) {
+  #$block = array();
+  $block = [];
+  switch ($delta) {
+    case 'block_home_slider':
+      $block['content'] = _gbcHomeSlider_content();
+  } // end switch
+  return $block;
+}
+
+/**
+ * Implement hook_theme()
+ */
+function gbcHomeSlider_theme() {
+  $theme = array();
+  $theme['home_slider'] = array(
+  'variables' => array(/*'menu_items' => array()*/),
+  #'template' => 'homeslider',
+  'template' => 'templates/gbcHomeSlider',
+  );
+  return $theme;
+}
+
+/**
+ * Retrive slider data and pass to homeslider template
+ *
+ * @return theme
+ */
+function _gbcHomeSlider_content(){
+  $content  = [];
+  $language = _gbcCommon_language();
+
+  // Get data using current language
+  $query = db_select('node', 'n');
+  $query->leftJoin('field_data_body', 'dfb', 'dfb.entity_id = n.nid');
+  $query->leftJoin('field_data_field_link', 'fli', 'fli.entity_id = n.nid');
+  $query->leftJoin('field_data_field_image', 'fim', 'fim.entity_id = n.nid');
+  $query->leftJoin('field_data_field_iframe', 'frm', 'frm.entity_id = n.nid');
+  $query->leftJoin('field_data_field_adr', 'fra', 'fra.entity_id = n.nid');
+
+  $terms = $query
+          ->fields('n', array('nid', 'title'))
+          ->fields('dfb', array('body_value'))
+          ->fields('fli', array('field_link_value'))
+          ->fields('fim', array('field_image_fid'))
+          ->fields('frm', array('field_iframe_value'))
+          ->fields('fra', array('field_adr_value'))
+          ->condition('n.type', 'slider_content_investor', '=')
+          ->condition('n.language', $language, '=')
+          ->condition('n.status', 1, '=')
+          ->range(0,1)
+          ->execute()
+          ->fetchAll();
+  #$results = $query_slider->execute()->fetchAll(PDO::FETCH_ASSOC);
+  #$results = $query_slider->execute()->fetchAll();
+
+  if (count($terms)<=0) {
+    return array();
+  } // end if
+
+  #$slider_content = array();
+
+    foreach ($terms as $result) {
+
+      $content['data'][] = array(
+        'image_path' => _gbcCommon_image_path($result->field_image_fid),
+        'title' => $result->title,
+        'description' => $result->body_value,
+        'link' => $result->field_link_value,
+        'iframe' => $result->field_iframe_value,
+        'adr' => $result->field_adr_value,
+        #'title' => (!empty($result['title'])) ? $result['title'] : '',
+        #'description' => (!empty($result['body_value'])) ? $result['body_value'] : '',
+        #'link' => (!empty($result['field_link_value'])) ? $result['field_link_value'] : '',
+        #'iframe' => (!empty($result['field_iframe_value'])) ? $result['field_iframe_value'] : '',
+        #'adr' => (!empty($result['field_adr_value'])) ? $result['field_adr_value'] : '',
+      );
+    } // end foreach
+
+
+  return theme('home_slider', array('content' => $content));
+}

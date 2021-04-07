@@ -1,0 +1,5 @@
+name = Financial Information
+description = Display menu contents of Financial Information.
+package = Corp - Sections | Investors | Financial  
+core = 7.x
+version = "7.x"

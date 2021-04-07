@@ -1,0 +1,119 @@
+<?php
+/**
+ * @file Investors - Anual Information
+ * @author Miguel Martínez <miguel01amd@gmail.com>
+ * @package Corp - Sections
+ * @info Show items of Anual Information
+ * @vertion dev 1.0.0
+ */
+
+/**
+ * Implements hook_permission().
+ * Define user permsissions to admin and view content
+ */
+function gbcAnnualInformation_permission() {
+  $perm = array(
+    'administer annualinfo' => array(
+      'title'       => t('administer annualinfo module'),
+      'description' => t('configure administer annualinfo module'),
+    ),
+    'view annualinfo' => array(
+      'title'       => t('view annualinfo'),
+      'description' => t('Permit viewer annualinfo content'),
+    ),
+  );
+  return $perm;
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function gbcAnnualInformation_block_info() {
+  $blocks = [];
+  $blocks['inv_annual_info'] = array(
+    'info'       => t('Block investors - Annual Information'),
+    'weight'     => 1,
+    'status'     => TRUE,
+    'region'     => 'content',
+    'cache'      => DRUPAL_NO_CACHE,
+    'visibility' => BLOCK_VISIBILITY_LISTED,
+    'pages'      => 'inversionistas/informacion-anual',
+  );
+
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function gbcAnnualInformation_block_view($delta = '') {
+  $block = [];
+  switch ($delta) {
+    case 'inv_annual_info':
+      module_load_include('inc', 'gbcAnnualInformation', 'gbcAnnualInformation');
+
+      drupal_add_js( drupal_get_path('theme', 'corporate') . "/js/controllers/investors/investors_home.js", array('weight' => 5,'scope' => 'footer'));
+      drupal_add_js( drupal_get_path('theme', 'corporate') . "/js/controllers/investors/investors_press_events.js", array('weight' => 6,'scope' => 'footer'));
+      drupal_add_js( drupal_get_path('theme', 'corporate') . "/js/search.js", array('weight' => 7,'scope' => 'footer'));
+
+      $token = drupal_get_token('investors');
+      drupal_add_js( array('gbcAnnualInformation' => $token), array('type' => 'setting') );
+
+      $ages = create_years();
+
+      $content['years']   = [ 0 => t('All years')] + $ages;
+      $content['reports'] = gbcAnnualInformation_get_items();
+
+      $block['content'] = theme('inv_annual_info', array('content' => $content));
+      break;
+  }//end switch
+  return $block;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function gbcAnnualInformation_theme() {
+  $theme = [];
+  $theme['inv_annual_info'] = [ 'template' => 'templates/annualinformation-page',  ];
+
+  return $theme;
+}
+
+
+/**
+ * Implements of hook_services().
+ * Declare service to section
+ */
+function gbcAnnualInformation_services_resources(){
+  $resource = array(
+    'annualinfo' => array(
+      'operations' => array(
+        'index' => array(
+          'help' => 'Get Annual Information items',
+          'file' => array(
+            'type'   => 'inc',
+            'module' => 'gbcAnnualInformation',
+            'name'   => 'gbcAnnualInformation',
+          ),
+          'callback'         => 'gbcAnnualInformation_get_items',
+          'access callback'  => 'user_access',
+          'access arguments' => array('view annualinfo'),
+          'access arguments append' => FALSE,
+          'args' => array(
+            array(
+              'name'        => 'year',
+              'type'        => 'int',
+              'description' => '',
+              'source'      => array('param' => 'year'),
+              'optional'    => TRUE,
+              'default'     => 0,
+            ),
+          ),
+        ), // end index
+      ), // end operations
+    ), // end latest
+  );
+
+  return $resource;
+}

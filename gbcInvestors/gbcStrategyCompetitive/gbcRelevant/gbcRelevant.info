@@ -1,0 +1,6 @@
+name = Strategy and competitive advantages - Relevant Information
+description = Display blocks with "Strategy and competitive advantages - Relevant Information" information.
+package = Corp - Sections | Investors | Strategy
+dependencies[] = gbcCommon
+core = 7.x
+version = "7.x"

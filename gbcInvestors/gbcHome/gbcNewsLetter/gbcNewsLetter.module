@@ -1,0 +1,165 @@
+<?php
+/**
+ * @file Modify gbcNewsLetter
+ * @author Miguel Martínez <miguel01amd@gmail.com>
+ * @package Corp - Sections
+ * @info Module to add fileds for the form gbcNewsLetter
+ * @vertion dev 1.0.0
+ */
+
+/**
+ * Implement hook_theme()
+ */
+function gbcNewsLetter_theme() {
+  $theme = [];
+  $theme['gbcNewsLetter'] = [ 'render element' => 'form', 'template' => 'templates/gbcNewsLetter', ];
+  return $theme;
+}
+/**
+* Implement hook_form_alter()
+*/
+function gbcNewsLetter_form_alter(&$form, &$form_state, $form_id) {
+	switch($form_id) {
+		case 'simplenews_block_form_1119':
+			$form['name'] = array(
+				'#type' => 'textfield',
+				'#default_value' => '',
+				'#size' => 20,
+				'#attributes' => array(
+				'data-name' => t("Name*"),
+				'#theme_wrappers' => array(),
+        '#required' => TRUE,
+				),
+			);
+			$form['lastname'] = array(
+				'#type' => 'textfield',
+				'#default_value' => '',
+				'#required' => TRUE,
+				'#size' => 20,
+				'#attributes' => array(
+				'data-name' => t("Surnames*"),
+				),
+			);
+			$form['company'] = array(
+				'#type' => 'textfield',
+				'#default_value' => '',
+				'#required' => TRUE,
+				'#size' => 20,
+				'#attributes' => array(
+				'data-name' => t("Company*"),
+				),
+			);
+			$form['mail'] = array(
+				'#type' => 'textfield',
+				'#default_value' => '',
+				'#required' => TRUE,
+				'#size' => 20,
+				'#attributes' => array(
+					'data-name' => t("E-mail*"),
+				),
+			);
+
+			$form['country'] = array(
+        		'#type' => 'select',
+        		'#default_value' => '',
+        		'#options' => _gbcCommon_get_country_form(),
+            '#attributes' => array('class' => array('council-dropdown'), 'name' => array('cboCountry'), 'id' => array('cboCountry')),
+    		);
+
+			$form['captcha'] = array(
+		    '#type' => 'captcha',
+		    '#prefix' => '<li>',
+		    '#suffix' => '</li>',
+		    '#captcha_type' => 'image_captcha/Image'
+		  );
+    		$form['terms_of_use'] = array(
+    			'#type' => 'checkbox',
+    			'#title' => t("I accept the Privacy Notice and Terms and Conditions."),
+		      '#required' => TRUE,
+		  	);
+
+			$form['submit']['#value'] = t("Send");
+			$form['submit']['#attributes']['class'][] = 'btn-default nero';
+			$form['submit']['#validate'][] = 'checkout_confirm_news_form_validate';
+			$form['#submit'][] = 'gbcNewsLetter_block_form_submit';
+			$form['#theme'] = 'gbcNewsLetter';
+			$form['#theme_wrappers'] = array('form');
+		  return $form;
+		break;
+		case 'simplenews_confirm_add_form':
+
+			$mail = $form['mail']['#value'];
+			$list = $form['newsletter']['#value']->name;
+
+			$form['actions']['submit']['#type'] = 'submit';
+			$form['actions']['submit']['#value'] = t('Confirm');
+			$form['actions']['submit']['#attributes']['class'][] = 'btn';
+
+			$form['actions']['cancel']['#type'] = 'link';
+			$form['actions']['cancel']['#value'] = 'Cancel';
+			$form['actions']['cancel']['#attributes']['class'][] = 'btn';
+			$form['question'] = array(
+				'#markup' => '<p>' . t('Are you sure you want to add %user to the %newsletter?',
+					array(
+						'%user' => simplenews_mask_mail($mail),
+						'%newsletter' => $list)) . "<p>\n",
+  );
+		break;
+	}
+
+}
+
+/**
+* Implement hook_form_submit()
+*/
+function gbcNewsLetter_block_form_submit($form, &$form_state) {
+
+	if ($form['#id'] == 1119) {
+		$name = $form_state['values']['name'];
+		$lastname = $form_state['values']['lastname'];
+		$company = $form_state['values']['company'];
+		$country = $form_state['values']['country'];
+		$mail = $form_state['values']['mail'];
+
+	}
+}
+
+function checkout_confirm_news_form_validate($form, &$form_state) {
+
+  $name = $form_state['values']['name'];
+	$lastname = $form_state['values']['lastname'];
+	$company = $form_state['values']['company'];
+	$country = $form_state['values']['country'];
+	$mail = $form_state['values']['mail'];
+
+	if($name == 'Name*' || $name == 'Nombre*') {
+		$message = t('The Name field is required');
+		form_set_error('name', $message);
+	} // end if
+
+	if($lastname == 'Surnames*' || $lastname == 'Apellidos*') {
+		$message = t('The Surnames field is required');
+		form_set_error('lastname', $message);
+	} // end if
+
+	if($company == 'Company*' || $company == 'Empresa*') {
+		$message = t('The Company field is required');
+		form_set_error('company', $message);
+	} // end if
+
+	if($country == 'Country*' || $country == 'País*' || $country == '') {
+		$message = t('The Country field is required');
+		form_set_error('country', $message);
+	} // end if
+
+	if($mail == 'E-mail*' || $mail == 'Correo electrónico*' || $mail == '') {
+		$message = t('The E-mail field is required');
+		form_set_error('mail', $message);
+	} elseif (!valid_email_address($mail)) {
+		$message = t('The email address %email is not valid',
+			array('%email' => $mail));
+		form_set_error('email', $message);
+	} // end if
+
+	return TRUE;
+}

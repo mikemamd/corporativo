@@ -1,0 +1,5 @@
+name = Latest Events - Press and events section
+description = Display block latest events in "Press and events landing" section.
+package =  Corp - Sections | Investors | Press
+core = 7.x
+version = "7.x"

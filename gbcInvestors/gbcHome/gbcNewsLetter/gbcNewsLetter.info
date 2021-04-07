@@ -1,0 +1,5 @@
+name = Modify gbcNewsLetter
+description = Module to add fileds for the form gbcNewsLetter
+package = Corp - Sections | Investors | Home
+core = 7.x
+version = "7.x"

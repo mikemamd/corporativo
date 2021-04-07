@@ -1,0 +1,5 @@
+name = RI Contact section
+description = Display form for "RI Contact" section.
+package = Corp - Sections | Investors
+core = 7.x
+version = "7.x"

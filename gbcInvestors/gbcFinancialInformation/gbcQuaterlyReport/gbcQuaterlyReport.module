@@ -1,0 +1,144 @@
+<?php
+/**
+ * @file  Investors - Presentation Repors
+ * @author Miguel Martínez <miguel01amd@gmail.com>
+ * @package Corp - Sections
+ * @info Show the items of Presentations Reports
+ * @vertion dev 1.0.0
+ */
+
+/**
+ * Implements hook_permission().
+ * Define user permsissions to admin and view content
+ */
+function gbcQuaterlyReport_permission() {
+  $perm = array(
+    'administer quaterlyreport' => array(
+      'title'       => t('administer quaterlyreport module'),
+      'description' => t('configure administer quaterlyreport module'),
+    ),
+    'view quaterlyreport' => array(
+      'title'       => t('view quaterlyreport'),
+      'description' => t('Permit viewer quaterlyreport content'),
+    ),
+  );
+  return $perm;
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function gbcQuaterlyReport_block_info() {
+  $blocks = [];
+  $blocks['inv_quaterly_report'] = array(
+    'info'       => t('Block investors - Quaterly Reports'),
+    'weight'     => 1,
+    'status'     => TRUE,
+    'region'     => 'content',
+    'cache'      => DRUPAL_NO_CACHE,
+    'visibility' => BLOCK_VISIBILITY_LISTED,
+    'pages'      => 'inversionistas/reportes-trimestrales',
+  );
+
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function gbcQuaterlyReport_block_view($delta = '') {
+  $block = [];
+  switch ($delta) {
+    case 'inv_quaterly_report':
+      module_load_include('inc', 'gbcQuaterlyReport', 'gbcQuaterlyReport');
+
+      drupal_add_js( drupal_get_path('theme', 'corporate') . "/js/controllers/investors/investors_home.js", array('weight' => 5,'scope' => 'footer'));
+      drupal_add_js( drupal_get_path('theme', 'corporate') . "/js/controllers/investors/investors_press_events.js", array('weight' => 6,'scope' => 'footer'));
+      drupal_add_js( drupal_get_path('theme', 'corporate') . "/js/search.js", array('weight' => 7,'scope' => 'footer'));
+
+      $token = drupal_get_token('investors');
+      drupal_add_js( array('gbcQuaterlyReport' => $token), array('type' => 'setting') );
+
+      $ages = create_years();
+
+      $content['types']   = gbcQuaterlyReport_get_type();
+      $content['years']   = [ 0 => t('All years')] + $ages;
+      $content['quarter'] = gbcFinancialInformation_get_quarters();
+      $content['reports'] = gbcQuaterlyReport_get_items();
+
+      $block['content'] = theme('inv_quaterly_report', array('content' => $content));
+      break;
+  }//end switch
+  return $block;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function gbcQuaterlyReport_theme() {
+  $theme = [];
+  $theme['inv_quaterly_report'] = [ 'template' => 'templates/quaterly-page',  ];
+
+  return $theme;
+}
+
+/**
+ * Implements of hook_services().
+ * Declare service to section
+ */
+function gbcQuaterlyReport_services_resources(){
+  $resource = array(
+    'quatereport' => array(
+      'operations' => array(
+        'index' => array(
+          'help' => 'Get quaterky reports items',
+          'file' => array(
+            'type'   => 'inc',
+            'module' => 'gbcQuaterlyReport',
+            'name'   => 'gbcQuaterlyReport',
+          ),
+          'callback'         => 'gbcQuaterlyReport_get_content',
+          'access callback'  => 'user_access',
+          'access arguments' => array('view quaterlyreport'),
+          'access arguments append' => FALSE,
+          'args' => array(
+            array(
+              'name'        => 'type',
+              'type'        => 'int',
+              'description' => '',
+              'source'      => array('param' => 'type'),
+              'optional'    => TRUE,
+              'default'     => 0,
+            ),
+            array(
+              'name'        => 'year',
+              'type'        => 'int',
+              'description' => '',
+              'source'      => array('param' => 'year'),
+              'optional'    => TRUE,
+              'default'     => 0,
+            ),
+            array(
+              'name'        => 'quaterly',
+              'type'        => 'int',
+              'description' => '',
+              'source'      => array('param' => 'quaterly'),
+              'optional'    => TRUE,
+              'default'     => 0,
+            ),
+            array(
+              'name'        => 'page',
+              'type'        => 'int',
+              'description' => '',
+              'source'      => array('param' => 'page'),
+              'optional'    => TRUE,
+              'default'     => 1,
+            ),
+          ),
+        ), // end index
+      ), // end operations
+    ), // end latest
+  );
+
+  return $resource;
+}

@@ -1,0 +1,6 @@
+name = Home Focus Investors
+description = Display blocks with "Home Focus Investors- Group Bimbo" information.
+package = Corp - Sections | Investors | Home
+dependencies[] = gbcCommon
+core = 7.x
+version = "7.x"

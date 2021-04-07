@@ -1,0 +1,5 @@
+name = Investors - Quaterly Repors
+description = Show the items of Quaterly Report
+package = Corp - Sections | Investors | Financial  
+version = 0.1
+core = 7.x

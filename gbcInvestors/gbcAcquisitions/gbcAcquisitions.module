@@ -1,0 +1,133 @@
+<?php
+/**
+ * @file  Fusions and Acquisitions Investors
+ * @author Miguel Martínez <miguel01amd@gmail.com>
+ * @package Corp - Sections
+ * @info Display blocks with "Fusions and Acquisitions Investors" information.
+ * @vertion dev 1.0.0
+ */
+
+
+/**
+ * Implement hook_block_info()
+ */
+function gbcAcquisitions_block_info() {
+  $blocks = array();
+  $blocks['block_gbcAcquisitions'] = array(
+    'info' => t('Fusions and Acquisitions Investors'),
+    'title' => '<none>',
+    'status' => TRUE,
+    'region' => 'content',
+    'visibility' => BLOCK_VISIBILITY_LISTED,
+    'pages' => 'investors/fusions-and-acquisitions',
+  );
+
+  return $blocks;
+}
+
+/**
+ * Implement hook_block_view()
+ */
+function gbcAcquisitions_block_view($delta) {
+
+  $block = [];
+  switch ($delta) {
+    case 'block_gbcAcquisitions':
+      drupal_add_js( drupal_get_path('theme', 'corporate') . "/js/controllers/investors/investors_home.js" , array('weight' => 8,'scope' => 'footer'));
+      drupal_add_js( drupal_get_path('theme', 'corporate') . "/js/plugins/slick.min.js" , array('weight' => 8,'scope' => 'footer'));
+      drupal_add_js( drupal_get_path('theme', 'corporate') . "/js/controllers/investors/investors_fusion.js" , array('weight' => 10,'scope' => 'footer'));
+      drupal_add_js( drupal_get_path('theme', 'corporate') . "/js/search.js" , array('weight' => 12,'scope' => 'footer'));
+      $block['content'] = _gbcAcquisitions_content();
+  } // end switch
+  return $block;
+}
+
+/**
+ * Implement hook_theme()
+ */
+function gbcAcquisitions_theme()
+{
+  $theme = array();
+  $theme['gbcAcquisitions'] = array(
+  'variables' => array(),
+  'template' => 'templates/gbcAcquisitions',
+  );
+  return $theme;
+}
+
+/**
+ * Retrive slider timeline date
+ *
+ * @return theme
+ */
+function _gbcAcquisitions_content() {
+  $content  = [];
+  $language = _gbcCommon_language();
+
+  $vocab = taxonomy_vocabulary_machine_name_load('fusion_and_acquisitions');
+  $vid   = $vocab->vid;
+  $query = db_select('taxonomy_term_data', 'ttd');
+  $query->join('taxonomy_term_hierarchy', 'tth', 'tth.parent = ttd.tid');
+  $terms = $query
+          ->fields('ttd', ['tid', 'name', 'description'])
+          ->condition('ttd.vid', $vid, '=')
+          ->condition('ttd.language', $language, '=')
+          ->groupBy('ttd.tid')
+          ->execute()
+          ->fetchAll();
+
+  if (count($terms)<=0) {
+    return array();
+  } // end if
+
+    foreach ($terms as $result) {
+      $content['data'][] = array(
+        'tidLineTime' => $result->tid,
+        'title' => $result->name,
+      );
+    $content[$result->name] = _gbcAcquisitions_related($result->tid);
+    } // end foreach
+  return theme('gbcAcquisitions', array('content' => $content));
+}
+
+
+
+/**
+ * Retrive slider brand timeline date
+ *
+ * @return theme
+ */
+function _gbcAcquisitions_related($tid) {
+  $content  = [];
+
+  $query = db_select('taxonomy_term_hierarchy', 'tth');
+  $query->leftJoin('taxonomy_term_data', 'ttd', 'ttd.tid = tth.tid');
+  $query->leftJoin('field_data_field_image', 'fdfi', 'fdfi.entity_id = tth.tid');
+  $query->leftJoin('field_data_field_file', 'fdff', 'fdff.entity_id = tth.tid');
+  $terms = $query
+          ->fields('ttd', ['name', 'description'])
+          ->fields('tth', ['tid'])
+          ->fields('fdfi', array('field_image_fid'))
+          ->fields('fdff', array('field_file_fid'))
+          ->condition('tth.parent', $tid, '=')
+          ->execute()
+          ->fetchAll();
+
+  if (count($terms)<=0) {
+    return array();
+  } // end if
+
+    foreach ($terms as $result) {
+
+      $content[] = array(
+        'tidTime' => $tid,
+        'tid' => $result->tid,
+        'title' => $result->name,
+        'img' =>  _gbcCommon_image_path($result->field_image_fid),
+        'file' => _gbcCommon_image_path($result->field_file_fid),
+        'description' => $result->description,
+      );
+    } // end foreach
+
+  return $content;
+}

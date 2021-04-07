@@ -1,0 +1,5 @@
+name = Investors - Anual Information
+description = Show items of Anual Information
+package = Corp - Sections | Investors | Financial  
+version = 0.1
+core = 7.x

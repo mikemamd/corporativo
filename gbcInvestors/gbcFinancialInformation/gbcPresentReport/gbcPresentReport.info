@@ -1,0 +1,5 @@
+name = Investors - Presentation Repors
+description = Show the items of Presentations Reports
+package = Corp - Sections | Investors | Financial  
+version = 0.1
+core = 7.x

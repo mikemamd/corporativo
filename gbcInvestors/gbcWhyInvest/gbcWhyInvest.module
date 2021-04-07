@@ -1,0 +1,81 @@
+<?php
+/**
+ * @file Investors Why Invest
+ * @author Miguel Martínez <miguel01amd@gmail.com>
+ * @package Corp - Sections
+ * @info Show items to Why Invest
+ * @vertion dev 1.0.0
+ */
+
+/**
+ * Implements hook_block_info().
+ */
+function gbcWhyInvest_block_info() {
+  $blocks = [];
+  $blocks['whyinvest_block'] = array(
+    'info'       => t('Bloque items whyinvest'),
+    'weight'     => 1,
+    'status'     => TRUE,
+    'region'     => 'content',
+    'cache'      => DRUPAL_NO_CACHE,
+    'visibility' => BLOCK_VISIBILITY_LISTED,
+    'pages'      => 'investors/why-invest',
+  );
+
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function gbcWhyInvest_block_view($delta = '') {
+  $block = [];
+  switch ($delta) {
+    case 'whyinvest_block':
+      $block['content'] = gbcWhyInvest_get_content();
+      break;
+  }//end switch
+  return $block;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function gbcWhyInvest_theme() {
+  $theme = [];
+  $theme['whyinvest_block'] = [ 'template' => 'templates/why-invest',  ];
+
+  return $theme;
+}
+
+/**
+ * Return items to WhyInvest section
+ * @return theme (array)
+ */
+function gbcWhyInvest_get_content() {
+  $content = [];
+  $lang    = _gbcCommon_language();
+  $vocab   = taxonomy_vocabulary_machine_name_load('investors_why');
+  $vid     = $vocab->vid;
+
+  $qry = db_select('taxonomy_term_data', 'ttd');
+  $qry->leftJoin('field_data_field_class', 'fic', 'fic.entity_id = ttd.tid');
+  $qry->condition('ttd.vid', $vid, '=')
+      ->condition('ttd.language', $lang, '=');
+  $qry->fields('ttd', ['tid', 'name', 'description'])
+      ->fields('fic', ['field_class_value'])
+      ->orderBy('ttd.weight', 'ASC');
+  $results = $qry->execute()->fetchAll();
+
+  if ( !empty($results) ) {
+    foreach ($results as $result) {
+      $content[$result->tid] = [
+        'name'  => $result->name,
+        'desc'  => $result->description,
+        'class' => $result->field_class_value,
+      ];
+    }// endforeach
+  }// endoif
+
+  return theme('whyinvest_block', array('content' => $content));
+}

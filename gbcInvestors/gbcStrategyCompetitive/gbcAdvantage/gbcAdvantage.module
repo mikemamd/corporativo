@@ -1,0 +1,62 @@
+<?php
+/**
+ * @file Strategy and competitive advantages - Our Advantage
+ * @author Miguel Martínez <miguel01amd@gmail.com>
+ * @package Corp - Sections
+ * @info Display blocks with "Strategy and competitive advantages - Our Advantage" information.
+ * @vertion dev 1.0.0
+ */
+
+/**
+ * Implement hook_block_info()
+ */
+function gbcAdvantage_block_info() {
+  $blocks = [];
+  $blocks['block_gbcAdvantage'] = [
+    'info'       => t('Strategy and competitive advantages - Advantage'),
+    'title'      => '<none>',
+    'status'     => TRUE,
+    'region'     => 'content',
+    'weight'     => 2,
+    'visibility' => BLOCK_VISIBILITY_LISTED,
+  ];
+
+  return $blocks;
+}
+
+/**
+ * Implement hook_block_view()
+ */
+function gbcAdvantage_block_view($delta) {
+  $block = [];
+  switch ($delta) {
+    case 'block_gbcAdvantage':
+      drupal_add_js( drupal_get_path('theme', 'corporate') . "/js/controllers/investors_our_advantage.js", array('weight' => 4,'scope' => 'footer'));
+      $block['content'] = _gbcAdvantage_content();
+  } // end switch
+  return $block;
+}
+
+/**
+ * Implement hook_theme()
+ */
+function gbcAdvantage_theme() {
+  $theme = [];
+  $theme['gbcAdvantage'] = [
+  'variables' => [],
+  'template' => 'templates/gbcAdvantage',
+  ];
+  return $theme;
+}
+
+/**
+ * Retrive content from Strategy and competitive advantages - Relevant Information section
+ *
+ * @return theme
+ */
+function _gbcAdvantage_content() {
+  $vid = _gbcCommon_vocabularyID('our_competitive_advantages');
+  $content = i18n_taxonomy_get_tree($vid, _gbcCommon_language());
+
+  return theme('gbcAdvantage', ['content' => $content]);
+}

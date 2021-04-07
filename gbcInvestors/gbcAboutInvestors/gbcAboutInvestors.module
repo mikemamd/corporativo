@@ -1,0 +1,148 @@
+<?php
+/**
+ * @file About us Investors
+ * @author Miguel Martínez <miguel01amd@gmail.com>
+ * @package Corp - Sections
+ * @info Display blocks with "About us Investors" information.
+ * @vertion dev 1.0.0
+ */
+
+/**
+ * @file
+ * display About Us Investors
+ */
+
+/**
+ * Implement hook_block_info()
+ */
+function gbcAboutInvestors_block_info() {
+  $blocks = array();
+  $blocks['block_gbcAboutInvestors'] = array(
+    'info' => t('About us Investors'),
+    'title' => '<none>',
+    'status' => TRUE,
+    'region' => 'content',
+    'visibility' => BLOCK_VISIBILITY_LISTED,
+    'pages' => 'investors/about',
+  );
+
+  return $blocks;
+}
+
+/**
+ * Implement hook_block_view()
+ */
+function gbcAboutInvestors_block_view($delta) {
+  #$block = array();
+  $block = [];
+  switch ($delta) {
+    case 'block_gbcAboutInvestors':
+      $block['content'] = _gbcAboutInvestors_content();
+  } // end switch
+  return $block;
+}
+
+/**
+ * Implement hook_theme()
+ */
+function gbcAboutInvestors_theme() {
+  $theme = array();
+  $theme['gbcAboutInvestors'] = array(
+  'variables' => array(),
+  'template' => 'templates/gbcAboutInvestors',
+  );
+  return $theme;
+}
+
+/**
+ * Retrive slider data and pass to homeslider template
+ *
+ * @return theme
+ */
+function _gbcAboutInvestors_content() {
+
+  $language = _gbcCommon_language();
+  $rows = [];
+
+  $query = db_select('node', 'n')
+  ->condition('status', '1', '=')
+  ->condition('n.language', $language, '=')
+  ->condition('type', 'page_about_investors', '=');
+  $query->fields('n', ['nid', 'title', 'changed']);
+  $results = $query
+        ->extend('PagerDefault')
+        ->element('0')
+        ->limit(1)
+        ->orderBy('changed', 'DESC')
+        ->execute();
+
+        while($row = $results->fetchAssoc()) {
+
+          $rows['items'][] = [
+            'title'   => $row['title'],
+          ];
+        }//endwhile
+
+/**/
+          $rows['link'] = _gbcAboutInvestors_about_menu('menu-about-investors');
+          #watchdog('$rows[link]', print_r($rows['link'],TRUE));
+/**/
+  return theme('gbcAboutInvestors', array('content' => $rows));
+}
+
+/**
+ * Return the menu of the parameter About Us Investors
+ * @return mixed
+ */
+function _gbcAboutInvestors_about_menu($type) {
+  global $base_url;
+  $menu     = [];
+  $language = _gbcCommon_language();
+
+  $qry = db_select('menu_links', 'mn');
+  $qry->condition('mn.menu_name', $type, '=')
+      ->condition('mn.has_children', '0', '=')
+      ->condition('mn.language', $language, '=')
+      ->condition('mn.hidden', 0);
+  $qry->fields('mn', ['mlid', 'link_title','link_path']);
+  $qry->orderBy('weight', 'ASC');
+  $results = $qry->execute()->fetchAll();
+
+  if (isset($results) && !empty($results)) {
+    foreach ($results as $result) {
+
+      $link = $result->link_path;
+
+      if ($link == '<front>') {
+        $link = url();
+      }
+      #<li><a class="btn-link" href="#"><h6>Fusiones y adquisiciones</h6></a></li>
+      #$title = "<h6>".$kit['title']."</h6>";
+      #print l($title, $kit['file'], array('attributes' => array('class' => 'btn-download'), 'html' => TRUE));
+      $title = "<h6>$result->link_title</h6>";
+      $menu[] = [
+
+        'url'     => l($title, $link, array('attributes' => array('class' => 'btn-link'), 'html' => TRUE)),
+        #'url'     => l($result->link_title, $link, array('attributes' => array('class' => 'btn-default next'))),
+
+      ];
+
+
+    }//end foreach
+    return $menu;
+  }//end if
+}
+
+
+/**
+ * Preprocess hook to node template.
+ * @return array
+ */
+function _gbcAboutInvestors_preprocess_node(&$variables) {
+  //Return img content
+  $variables['image'] = [];
+  if (isset($variables['field_image'][0]['fid']) && !empty($variables['field_image'][0]['fid'])) {
+    $variables['image'] = _gbcCommon_image_path($variables['field_image'][0]['fid']);
+  }//end if
+
+}

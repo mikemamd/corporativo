@@ -1,0 +1,103 @@
+<?php
+
+/**
+ * Implements hook_block_info().
+ *
+ * @return mixed
+ */
+function gbcAnalystCoverage_block_info() {
+  $block = [];
+  $block['gbcAnalystCoverage_block'] = array(
+    'info'  => t('Analyst Coverage'),
+    'title' => '<none>',
+    'status'     => TRUE,
+    'region'     => 'content',
+    'cache' => DRUPAL_NO_CACHE,
+    'visibility' => BLOCK_VISIBILITY_LISTED,
+  );
+
+  return $block;
+}
+
+/**
+ * Implements hook_block_view().
+ *
+ * Defines function that sets block view
+ */
+function gbcAnalystCoverage_block_view($delta = '') {
+  switch ($delta) {
+    case 'gbcAnalystCoverage_block':
+      $block['content'] = _gbcAnalystCoverage_content();
+      break;
+    default:
+      break;
+  } // end switch
+  return $block;
+}
+
+/**
+ * Implements hook_theme().
+ *
+ * @see templates
+ * @return array
+ */
+function gbcAnalystCoverage_theme() {
+  $theme['gbcAnalystCoverage_block'] = array(
+    'variables' => array(),
+    'template'  => 'templates/gbcAnalystCoverage',
+  );
+  return $theme;
+}
+
+/**
+ * Get all  description to display menu
+ *
+ * @return string
+ */
+function _gbcAnalystCoverage_content()
+{
+  $content  = [];
+  $query = db_select('node', 'n');
+  $query->join('field_data_field_company','fdfc','fdfc.entity_id = n.nid');
+  $query->join('field_data_field_telephone','fdft','fdft.entity_id = n.nid');
+  $data = $query
+        ->fields('n',array('title'))
+        ->fields('fdfc',array('field_company_value'))
+        ->fields('fdft',array('field_telephone_value'))
+        ->condition('n.type', 'analyst_coverage')
+        ->orderBy('n.nid', 'DESC')
+        ->execute()->fetchAll();
+
+  if (count($data)<=0) {
+    return array();
+  } // end if
+
+  foreach ($data as $result) {
+    $content['data'][] = array(
+      'title'     => $result->title,
+      'company'   => $result->field_company_value,
+      'telephone' => $result->field_telephone_value,
+    );
+  } // end foreach
+  $latest = _getLatestUpdate();
+  return theme('gbcAnalystCoverage_block', array('content' => $content, 'latest' => $latest));
+}
+
+function _getLatestUpdate() {
+  $language = _gbcCommon_language();
+  $date = variable_get('analysts_date', array());
+  (int)$day = date('j');
+  (int)$mont = date('n')-2;
+  (int)$year = date('Y');
+
+  if($language == 'es') {
+    $month_names = array('Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre');
+    $custom_month = $month_names[$mont];
+    $last_update = "Última actualización al $day de $custom_month del $year";
+  } elseif ($language == 'en') {
+    $month_names = array('January', 'February ', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December');
+    $custom_month = $month_names[$mont];
+    $last_update = "Last updated $custom_month $day, $year";
+  }
+  return $last_update;
+}

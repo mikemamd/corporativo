@@ -1,0 +1,137 @@
+<?php
+/**
+ * @file Latest Events - Press and events section
+ * @author Miguel Martínez <miguel01amd@gmail.com>
+ * @package Corp - Sections
+ * @info Display block latest events in "Press and events landing" section.
+ * @vertion dev 1.0.0
+ */
+
+/**
+ * Implements hook_block_info().
+ *
+ * @return mixed
+ */
+function gbcLatestEvents_block_info() {
+  $block = [];
+  $block['gbcLatestEvents_block'] = array(
+    'info'       => t('Latest Events'),
+    'title'      => '<none>',
+    'status'     => TRUE,
+    'region'     => 'bottom_content',
+    'cache'      => DRUPAL_NO_CACHE,
+    'visibility' => BLOCK_VISIBILITY_LISTED,
+  );
+
+  return $block;
+}
+
+/**
+ * Implements hook_block_view().
+ *
+ * Defines function that sets block view
+ */
+function gbcLatestEvents_block_view($delta = '') {
+  switch ($delta) {
+    case 'gbcLatestEvents_block':
+      drupal_add_js( drupal_get_path('theme', 'corporate') . "/js/controllers/investors/investors_home.js", array('weight' => 5,'scope' => 'footer'));
+      drupal_add_js( drupal_get_path('theme', 'corporate') . "/js/controllers/investors/investors_press_events.js", array('weight' => 5,'scope' => 'footer'));
+      $block['content'] = _gbcLatestEvents_content();
+      break;
+    default:
+      break;
+  } // end switch
+  return $block;
+}
+
+/**
+ * Implements hook_theme().
+ *
+ * @see templates
+ * @return array
+ */
+function gbcLatestEvents_theme() {
+  $theme['gbcLatestEvents_block'] = array(
+    'variables' => array(),
+    'template'  => 'templates/gbcLatestEvents',
+  );
+  return $theme;
+}
+
+/**
+ * Get all  description to display menu
+ *
+ * @return string
+ */
+function _gbcLatestEvents_content() {
+  $content  = [];
+  $language = _gbcCommon_language();
+  $link = ($language == 'en') ? 'node/762': 'node/763';
+  $query = db_select('node', 'n');
+  $query->join('field_data_field_date','fdfd','fdfd.entity_id = n.nid');
+  $query->join('field_data_field_location','fdfl','fdfl.entity_id = n.nid');
+  $query->join('field_data_field_event_schedule','fdfes','fdfes.entity_id = n.nid');
+  $data = $query
+        ->fields('n',array('title','nid'))
+        ->fields('fdfd',array('field_date_value','field_date_value2'))
+        ->fields('fdfl',array('field_location_value'))
+        ->fields('fdfes', array('field_event_schedule_value'))
+        ->condition('n.type', 'events')
+        ->condition('n.status',1)
+        ->condition('n.language',$language)
+        ->orderBy('n.nid', 'DESC')
+        ->range(0,2)
+        ->execute()->fetchAll();
+
+  if (count($data)<=0) {
+    return array();
+  } // end if
+
+  foreach ($data as $result) {
+    $content['data'][] = array(
+      'title' => $result->title,
+      'nid' => $result->nid,
+      'date_start' => $result->field_date_value,
+      'date_end' => $result->field_date_value2,
+      'location' => $result->field_location_value,
+      'event_schedule' => $result->field_event_schedule_value,
+    );
+  } // end foreach
+  $eventsJson = _gbcLatestEvents_datesJson();
+  return theme('gbcLatestEvents_block', array('content' => $content,'events_date' => $eventsJson,'link_event' => $link));
+}
+
+/**
+ * Get events date
+ *
+ * @return json
+ */
+function _gbcLatestEvents_datesJson()
+{
+  $content  = [];
+  $language = _gbcCommon_language();
+  $query = db_select('node', 'n');
+  $query->join('field_data_field_date','fdfd','fdfd.entity_id = n.nid');
+  $data = $query
+        ->fields('fdfd',array('field_date_value'))
+        ->condition('n.type', 'events')
+        ->condition('n.language',$language)
+        ->condition('n.status',1)
+        ->orderBy('n.nid', 'DESC')
+        ->execute()->fetchAll();
+
+  if (count($data)<=0) {
+    return array();
+  } // end if
+
+  foreach ($data as $result) {
+
+    $phpdate = strtotime($result->field_date_value);
+    $mysqldate = date( 'm/d/Y', $phpdate );
+
+    $content['Date'][] = array(
+      'date_start' => $mysqldate,
+    );
+  } // end foreach
+  return json_encode($content,1);
+}

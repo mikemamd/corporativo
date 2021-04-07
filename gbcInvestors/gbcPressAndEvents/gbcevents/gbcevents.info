@@ -1,0 +1,5 @@
+name = Events section
+description = Display block and form for "Events" section.
+package =  Corp - Sections | Investors | Press
+core = 7.x
+version = "7.x"

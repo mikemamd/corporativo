@@ -1,0 +1,5 @@
+name = Factsheet Page
+description = Show items to Factsheet
+package = Corp - Sections | Investors
+version = 0.1
+core = 7.x

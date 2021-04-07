@@ -1,0 +1,87 @@
+<?php
+/**
+ * @file Managers Investors
+ * @author Miguel Martínez <miguel01amd@gmail.com>
+ * @package Corp - Sections
+ * @info Display blocks with "Managers Investors" information.
+ * @vertion dev 1.0.0
+ */
+
+/**
+ * Implement hook_block_info()
+ */
+function gcbManagersInvestors_block_info() {
+  $blocks = array();
+  $blocks['block_gcbManagersInvestors'] = array(
+    'info'       => t('Managers Investors'),
+    'title'      => '<none>',
+    'status'     => TRUE,
+    'region'     => 'content',
+    'visibility' => BLOCK_VISIBILITY_LISTED,
+    'pages'      => 'investors/top-executives',
+  );
+
+  return $blocks;
+}
+
+/**
+ * Implement hook_block_view()
+ */
+function gcbManagersInvestors_block_view($delta) {
+  #$block = array();
+  $block = [];
+  switch ($delta) {
+    case 'block_gcbManagersInvestors':
+    drupal_add_js( drupal_get_path('theme', 'corporate') . "/js/controllers/investors/investors_managers.js", array('weight' => 12,'scope' => 'footer'));
+      $block['content'] = _gcbManagersInvestors_content();
+  } // end switch
+  return $block;
+}
+
+/**
+ * Implement hook_theme()
+ */
+function gcbManagersInvestors_theme() {
+  $theme = array();
+  $theme['gcbManagersInvestors'] = array(
+  'variables' => array(),
+  'template' => 'templates/gcbManagersInvestors',
+  );
+  return $theme;
+}
+
+/**
+ * Retrive slider data and pass to homeslider template
+ *
+ * @return theme
+ */
+function _gcbManagersInvestors_content() {
+  $vid  = taxonomy_vocabulary_machine_name_load('top_executives')->vid;
+  $language = _gbcCommon_language();
+  $content = [];
+
+  $qry = db_select('taxonomy_term_data', 'ttd');
+  $qry->leftJoin('field_data_field_market_stall', 'fdfms', 'fdfms.entity_id = ttd.tid');
+  $qry->condition('ttd.vid', $vid, '=');
+  $qry->condition('ttd.language', $language, '=');
+  $qry->fields('ttd', ['tid', 'name', 'description']);
+  $qry->fields('fdfms', ['field_market_stall_value']);
+  $qry->orderBy('ttd.weight', 'ASC');
+  $results = $qry->execute()->fetchAll();
+
+  if (!empty($results)) {
+    foreach ($results as $term) {
+      $content['data'][] = [
+        'tid'   => $term->tid,
+        'name'  => $term->name,
+        'market'  => $term->field_market_stall_value,
+        'description'  => $term->description,
+      ];
+    }//endforeach
+  }//endif
+/**/
+          #$rows['link'] = _gcbManagersInvestors_about_menu('menu-about-investors');
+          #watchdog('$rows[link]', print_r($rows['link'],TRUE));
+/**/
+  return theme('gcbManagersInvestors', array('content' => $content));
+}

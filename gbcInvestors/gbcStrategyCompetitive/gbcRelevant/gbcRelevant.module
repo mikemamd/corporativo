@@ -1,0 +1,102 @@
+<?php
+/**
+ * @file Strategy and competitive advantages - Relevant Information
+ * @author Miguel Martínez <miguel01amd@gmail.com>
+ * @package Corp - Sections
+ * @info Display blocks with "Strategy and competitive advantages - Relevant Information" information.
+ * @vertion dev 1.0.0
+ */
+
+/**
+ * Implement hook_block_info()
+ */
+function gbcRelevant_block_info() {
+  $blocks = [];
+  $blocks['block_gbcRelevant'] = [
+    'info'       => t('Strategy and competitive advantages - Relevant Information'),
+    'title'      => '<none>',
+    'status'     => TRUE,
+    'region'     => 'content',
+    'weight'     => 2,
+    'visibility' => BLOCK_VISIBILITY_LISTED,
+  ];
+
+  return $blocks;
+}
+
+/**
+ * Implement hook_block_view()
+ */
+function gbcRelevant_block_view($delta) {
+  $block = [];
+  switch ($delta) {
+    case 'block_gbcRelevant':
+      drupal_add_js( drupal_get_path('theme', 'corporate') . "/js/controllers/investors_info.js", array('weight' => 4,'scope' => 'footer'));
+      $block['content'] = _gbcRelevant_content();
+  } // end switch
+  return $block;
+}
+
+/**
+ * Implement hook_theme()
+ */
+function gbcRelevant_theme() {
+  $theme = [];
+  $theme['gbcRelevant'] = [
+  'variables' => [],
+  'template' => 'templates/gbcRelevant',
+  ];
+  return $theme;
+}
+
+/**
+ * Retrive content from Strategy and competitive advantages - Relevant Information section
+ *
+ * @return theme
+ */
+function _gbcRelevant_content() {
+  $content  = [];
+
+  $vid = _gbcCommon_vocabularyID('relevant_information_table');
+  $terms = i18n_taxonomy_get_tree($vid, _gbcCommon_language());
+
+  $tree = _gbcCommon_build_tree($terms);
+  $count = 0;
+  foreach ($terms as $t => $term) {
+    if ($term->parents[0] == 0) {
+      $countv = 0;
+      foreach ($term->childrens as $child) {
+        $content[$count][$countv] = _gbcRelevant_html_content($child->tid);
+        $countv++;
+      }
+      $count++;
+    } // end if
+  } // end foreach
+
+  return theme('gbcRelevant', ['content' => $content]);
+}
+
+/**
+ * @param string $id
+ * @return array|void
+ */
+function _gbcRelevant_html_content($id = '') {
+  if (empty($id)) {
+    return;
+  } // end if
+
+  $language = _gbcCommon_language();
+  $query = db_select('field_data_field_html_elements', 'fhe');
+  $query->addField('fhe', 'field_html_elements_value', 'element');
+  $terms = $query
+    ->condition('fhe.entity_id', (int) $id, '=')
+    ->condition('fhe.bundle', 'relevant_information_table', '=')
+    ->execute()
+    ->fetchAll();
+
+  if (count($terms)<=0) {
+    return [];
+  } // end if
+
+  return $terms;
+}

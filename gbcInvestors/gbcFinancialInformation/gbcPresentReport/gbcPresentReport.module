@@ -1,0 +1,118 @@
+<?php
+/**
+ * @file  Investors - Anual Information
+ * @author Miguel Martínez <miguel01amd@gmail.com>
+ * @package Corp - Sections
+ * @info Show items of Anual Information
+ * @vertion dev 1.0.0
+ */
+
+/**
+ * Implements hook_permission().
+ * Define user permsissions to admin and view content
+ */
+function gbcPresentReport_permission() {
+  $perm = array(
+    'administer presentreport' => array(
+      'title'       => t('administer presentreport module'),
+      'description' => t('configure administer presentreport module'),
+    ),
+    'view presentreport' => array(
+      'title'       => t('view presentreport'),
+      'description' => t('Permit viewer presentreport content'),
+    ),
+  );
+  return $perm;
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function gbcPresentReport_block_info() {
+  $blocks = [];
+  $blocks['inv_present_report'] = array(
+    'info'       => t('Block investors - Presentation Reports'),
+    'weight'     => 1,
+    'status'     => TRUE,
+    'region'     => 'content',
+    'cache'      => DRUPAL_NO_CACHE,
+    'visibility' => BLOCK_VISIBILITY_LISTED,
+    'pages'      => 'inversionistas/presentaciones',
+  );
+
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function gbcPresentReport_block_view($delta = '') {
+  $block = [];
+  switch ($delta) {
+    case 'inv_present_report':
+      module_load_include('inc', 'gbcPresentReport', 'gbcPresentReport');
+
+      drupal_add_js( drupal_get_path('theme', 'corporate') . "/js/controllers/investors/investors_home.js", array('weight' => 5,'scope' => 'footer'));
+      drupal_add_js( drupal_get_path('theme', 'corporate') . "/js/controllers/investors/investors_press_events.js", array('weight' => 6,'scope' => 'footer'));
+      drupal_add_js( drupal_get_path('theme', 'corporate') . "/js/search.js", array('weight' => 7,'scope' => 'footer'));
+
+      $token = drupal_get_token('investors');
+      drupal_add_js( array('gbcPresentReport' => $token), array('type' => 'setting') );
+
+      $ages = create_years();
+
+      $content['years']   = [ 0 => t('All years')] + $ages;
+      $content['reports'] = gbcPresentReport_get_items();
+
+      $block['content'] = theme('inv_present_report', array('content' => $content));
+      break;
+  }//end switch
+  return $block;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function gbcPresentReport_theme() {
+  $theme = [];
+  $theme['inv_present_report'] = [ 'template' => 'templates/presentation-page', ];
+
+  return $theme;
+}
+
+/**
+ * Implements of hook_services().
+ * Declare service to section
+ */
+function gbcPresentReport_services_resources(){
+  $resource = array(
+    'presentreport' => array(
+      'operations' => array(
+        'index' => array(
+          'help' => 'Get Presentation reports items',
+          'file' => array(
+            'type'   => 'inc',
+            'module' => 'gbcPresentReport',
+            'name'   => 'gbcPresentReport',
+          ),
+          'callback'         => 'gbcPresentReport_get_content',
+          'access callback'  => 'user_access',
+          'access arguments' => array('view presentreport'),
+          'access arguments append' => FALSE,
+          'args' => array(
+            array(
+              'name'        => 'year',
+              'type'        => 'int',
+              'description' => '',
+              'source'      => array('param' => 'year'),
+              'optional'    => TRUE,
+              'default'     => 0,
+            ),
+          ),
+        ), // end index
+      ), // end operations
+    ), // end latest
+  );
+
+  return $resource;
+}

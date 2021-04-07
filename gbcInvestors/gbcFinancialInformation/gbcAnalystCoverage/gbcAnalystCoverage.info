@@ -1,0 +1,5 @@
+name = Analyst Coverage Section - Financial information section
+description = Display block in "Analyst Coverage" section.
+package = Corp - Sections | Investors | Financial
+core = 7.x
+version = "7.x"
