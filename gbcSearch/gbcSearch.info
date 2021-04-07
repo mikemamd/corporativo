@@ -1,0 +1,5 @@
+name = Custom Search
+description = Search Custtom to site.
+package = Corp - Sections
+core = 7.x
+version = "7.x"

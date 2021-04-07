@@ -1,0 +1,98 @@
+<?php
+/**
+ * @file Custom Search
+ * @author Miguel Martínez <miguel01amd@gmail.com>
+ * @package Corp - Sections
+ * @info Search Custtom to site.
+ * @vertion dev 1.0.0
+ */
+
+/**
+ * Implements hook_search_info().
+ * Declare the new profile to custom search
+ */
+function gbcSearch_search_info() {
+  return array(
+    'title' => 'Corp',
+    'path'  => 'corp-search',
+  );
+}
+
+/**
+ * Implements hook__search_execute().
+ * Callback to new custom search
+ */
+function gbcSearch__search_execute($keys = NULL, $condition = NULL) {
+  $results = [];
+  global $base_url;
+
+  if (!$keys) {
+    $keys = '';
+  }
+
+  $qry = db_select('node', 'n');
+  $qry->condition('status', '1', '=');
+  $qry->condition(db_or()
+        ->condition('n.type', 'news', '=')
+        ->condition('n.type', 'press_release', '='));
+        ->condition('n.type', 'announcements', '='));
+        ->condition('n.type', 'inv_anual_report', '='));
+        ->condition('n.type', 'inv_quarterly_report', '='));
+        ->condition('n.type', 'inv_presentation_report', '='));
+  $qry->leftJoin('field_data_body', 'body', 'body.entity_id = n.nid');
+  $qry->leftJoin('field_data_field_header', 'fh', 'fh.entity_id = n.nid');
+  $qry->leftJoin('field_data_field_summary', 'fs', 'body.entity_id = n.nid');
+  $qry->leftJoin('field_data_field_history_year', 'fy', 'body.entity_id = n.nid');
+
+  $search = $qry->condition(db_or()
+        ->condition('n.title', '%' . db_like($keys) . '%', 'LIKE')
+        ->condition('pidea.field_ideas_value', '%' . db_like($keys) . '%', 'LIKE')
+        ->condition('pbody.body_value', '%' . db_like($keys) . '%', 'LIKE')
+        ->condition('ptx.field_texto_informativo_value', '%' . db_like($keys) . '%', 'LIKE')
+        ->condition('fi.field_ingredients_value', '%' . db_like($keys) . '%', 'LIKE')
+        ->condition('fe.field_elaboracion_value', '%' . db_like($keys) . '%', 'LIKE')
+        ->condition('fdesc.field_description_ec_value', '%' . db_like($keys) . '%', 'LIKE'))
+      ->fields('n', ['nid', 'title', 'type'])
+      ->fields('fim', ['field_img_min_fid'])
+      ->fields('fdesc', ['field_description_ec_value'])
+      ->fields('ttd', ['name'])
+      ->fields('fic', ['field_icon_class_value'])
+      ->orderBy('n.changed', 'DESC')
+      ->extend('PagerDefault')
+      ->limit(10)
+      ->execute();
+
+  if (!empty($search)) {
+    foreach ($search as $item) {
+      $alias    = drupal_get_path_alias('node/'.$item->nid);
+
+      $results[$item->nid] = [
+        'title' => $item->title,
+        'img'   => _gbcCommon_file_path($item->field_img_min_fid),
+        'desc'  => $item->field_description_ec_value,
+        'link'  => $base_url.'/'.$alias,
+      ];
+
+      if ($item->type == 'receipes') {
+        $results[$item->nid]['momento'] = [
+          'name'  => $item->name,
+          'class' => $item->field_icon_class_value,
+        ];
+      }//endif
+    }//endforeach
+  }//endif
+
+  return $results;
+}
+
+/**
+ * Implements hook_preprocess_search_result().
+ */
+function gbcSearch_preprocess_search_result(&$variables) {
+  $result = $variables['result'];
+
+  $variables['img']     = (isset($result['img'])) ? $result['img'] : '';
+  $variables['desc']    = (isset($result['desc'])) ? $result['desc'] : '';
+  $variables['link']    = (isset($result['link'])) ? $result['link'] : '';
+  $variables['momento'] = (isset($result['momento'])) ? $result['momento'] : '';
+}
